@@ -10,6 +10,7 @@ import { useSidebar } from '@/components/ui/sidebar';
 import { Tooltip, TooltipTrigger, AppTooltipContent } from '@/components/ui/tooltip';
 import { SettingsModal } from '@/components/toolbar/settings-modal';
 import { useFileSystem } from '@/contexts/FileSystemContext';
+import { PrintScope, exportToPdf, selectPrintableNodes } from '@/utils/print';
 import {
   extractMainContentFromHtml,
   importFromWebsite,
@@ -25,7 +26,6 @@ function toErrorMessage(error: unknown): string {
   }
   return 'Import failed. Try another page or HTML source.';
 }
-import { PrintScope, exportToPdf, selectPrintableNodes } from '@/utils/print';
 
 function parseNodeTimestamp(value?: string): Date | null {
   if (!value) {

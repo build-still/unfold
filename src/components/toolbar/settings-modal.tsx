@@ -554,6 +554,32 @@ export function SettingsModal({
                 />
               </Button>
             </footer>
+          ) : activeSection === 'import' ? (
+            <footer className="flex items-center justify-between gap-4 border-t border-modal-surface-border/70 px-5 py-3">
+              <p className="font-sans text-xs italic text-modal-surface-foreground/60">
+                this creates a new file from extracted content
+              </p>
+              <Button
+                onClick={importState.mode === 'website' ? handleImportWebsite : handleImportHtml}
+                variant="outline"
+                size="lg"
+                disabled={isImporting}
+                className={cn(
+                  'cursor-pointer relative overflow-hidden justify-start gap-2 px-3 py-2 text-sm font-semibold',
+                  'text-sidebar-foreground bg-sidebar-item-hover-bg/60 border-2 border-sidebar-border/70 hover:bg-sidebar-item-hover-bg/80',
+                  'transition-all duration-200 w-fit',
+                  'disabled:cursor-not-allowed disabled:opacity-50',
+                )}
+              >
+                <span className="relative z-10 inline-flex items-center gap-2 font-sans-serif">
+                  {isImporting ? 'importing...' : importState.mode === 'website' ? 'import from website' : 'import from HTML'}
+                </span>
+                <Ripple
+                  duration={1200}
+                  color="color-mix(in srgb, var(--sidebar-item-hover-bg) 82%, transparent)"
+                />
+              </Button>
+            </footer>
           ) : (
             <footer className="flex items-center justify-between gap-4 border-t border-modal-surface-border/70 px-5 py-3">
               <p className="font-sans text-xs italic text-modal-surface-foreground/60">
