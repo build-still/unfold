@@ -105,7 +105,7 @@ export const ColorSelector: FC<ColorSelectorProps> = ({
         <TooltipTrigger asChild>
           <PopoverTrigger asChild>
             <Button
-              variant="secondary"
+              variant="ghost"
               size="sm"
               className="h-8 gap-1 px-2 rounded-lg"
             >

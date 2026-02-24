@@ -115,7 +115,7 @@ export const EditorBubbleMenu: FC<EditorBubbleMenuProps> = (props) => {
             <Tooltip key={item.name}>
               <TooltipTrigger asChild>
                 <Button
-                  variant="secondary"
+                  variant="ghost"
                   size="sm"
                   data-active={item.isActive()}
                   onClick={(e) => {

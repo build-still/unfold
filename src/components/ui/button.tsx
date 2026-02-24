@@ -10,15 +10,15 @@ const buttonVariants = cva(
     variants: {
       variant: {
         default:
-          "bg-button text-button border border-button hover:bg-button-hover",
+          "bg-button text-button border border-button hover:bg-button-hover font-medium",
         destructive:
           "bg-destructive text-destructive-foreground hover:bg-destructive/90 focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40 dark:bg-destructive/60 transition-colors",
         outline:
           "inline-flex items-center gap-1.5 rounded-lg px-4 py-2 font-medium bg-button-outline-bg text-sidebar-foreground border border-button-outline-border hover:bg-button-outline-hover-bg hover:border-button-outline-hover-border transition-all duration-200",
         error:
           "cursor-pointer text-button-error-text border-2 bg-button-error-bg border-button-error-border hover:bg-button-error-hover-bg hover:border-button-error-hover-border hover:text-button-error-hover-text focus-visible:ring-button-error-ring transition-all duration-300",
-        secondary:
-          "hover:bg-sidebar-item-hover-bg/85 bg-sidebar-item-hover-bg/50 text-sidebar-foreground hover:text-foreground data-[active=true]:bg-hover-bg-strong data-[active=true]:text-foreground data-[active=true]:shadow-button-active transition-colors",
+        transparent:
+          "px-4 py-2 hover:bg-sidebar-item-hover-bg/55 border border-transparent hover:border hover:border-sidebar-item bg-transparent text-sidebar-foreground hover:text-foreground data-[active=true]:bg-hover-bg-strong data-[active=true]:text-foreground data-[active=true]:shadow-button-active transition-colors",
         ghost:
           "bg-button-ghost text-button hover:bg-button-hover transition-colors",
         link: "text-primary underline-offset-4 hover:underline",

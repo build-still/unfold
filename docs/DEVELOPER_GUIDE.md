@@ -112,16 +112,14 @@ See `docs/COLOR_SYSTEM.md` for token guidance.
 pnpm check
 ```
 
-## 9. CI and quality gates
-
-CI configuration is in `.github/workflows/ci.yml`.
+## 9. Quality gates
 
 Current required checks:
 
 - TypeScript typecheck (`pnpm typecheck`)
 - Production build (`pnpm build`)
 
-All pull requests should pass both checks.
+All pull requests should pass both checks locally and in any configured repository automation.
 
 ## 10. Legacy compatibility note
 

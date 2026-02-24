@@ -45,7 +45,7 @@ pnpm check
 - Link related issues.
 - Include screenshots/recordings for UI changes.
 - Update docs for architecture, behavior, or DX changes.
-- Ensure CI passes.
+- Ensure required checks pass.
 
 ## Code style guidelines
 

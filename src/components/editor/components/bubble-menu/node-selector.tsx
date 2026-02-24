@@ -133,7 +133,7 @@ export const NodeSelector: FC<NodeSelectorProps> = ({
         <TooltipTrigger asChild>
           <DropdownMenuTrigger asChild>
             <Button
-              variant="secondary"
+              variant="ghost"
               size="sm"
               className="bubble-node-trigger h-8 gap-1 px-2 rounded-lg"
               onMouseDown={(e) => e.preventDefault()}

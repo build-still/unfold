@@ -10,7 +10,7 @@ import {
   type PointerEvent as ReactPointerEvent,
 } from "react";
 import { createPortal } from "react-dom";
-import { Download, Link2, Maximize2, RefreshCw, X } from "lucide-react";
+import { Download, Maximize2, RefreshCw, X } from "lucide-react";
 
 import { saveImageFile } from "@/utils/invoke";
 
@@ -75,7 +75,6 @@ export const ImageNodeView = ({ node, updateAttributes }: NodeViewProps) => {
   const [draftWidth, setDraftWidth] = useState<string | null>(null);
   const [isResizing, setIsResizing] = useState(false);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
-  const [copyState, setCopyState] = useState<"idle" | "done" | "error">("idle");
   const [downloadState, setDownloadState] = useState<"idle" | "done" | "error">("idle");
 
   const loading = useMemo(() => !src && attachmentId === "uploading", [src, attachmentId]);
@@ -86,7 +85,6 @@ export const ImageNodeView = ({ node, updateAttributes }: NodeViewProps) => {
 
   const closePreview = useCallback(() => {
     setIsPreviewOpen(false);
-    setCopyState("idle");
     setDownloadState("idle");
   }, []);
 
@@ -158,7 +156,6 @@ export const ImageNodeView = ({ node, updateAttributes }: NodeViewProps) => {
     }
 
     stopNodeSelection(event);
-    setCopyState("idle");
     setDownloadState("idle");
     setIsPreviewOpen(true);
   }, [src, loading, error, isResizing, stopNodeSelection]);
@@ -168,19 +165,6 @@ export const ImageNodeView = ({ node, updateAttributes }: NodeViewProps) => {
     event.stopPropagation();
     void triggerDownload();
   }, [triggerDownload]);
-
-  const copyImageLink = useCallback(async (event: ReactMouseEvent<HTMLElement>) => {
-    event.preventDefault();
-    event.stopPropagation();
-    if (!src) return;
-
-    try {
-      await navigator.clipboard.writeText(src);
-      setCopyState("done");
-    } catch {
-      setCopyState("error");
-    }
-  }, [src]);
 
   const resetImageWidth = useCallback((event: ReactMouseEvent<HTMLElement>) => {
     event.preventDefault();

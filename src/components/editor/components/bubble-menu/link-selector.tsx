@@ -31,7 +31,7 @@ export const LinkSelector: FC<LinkSelectorProps> = ({
         <TooltipTrigger asChild>
           <PopoverTrigger asChild>
             <Button
-              variant="secondary"
+              variant="ghost"
               size="sm"
               className="h-8 w-8 p-0 rounded-lg"
             >

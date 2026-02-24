@@ -1,7 +1,8 @@
-import { GlobeIcon, PaletteIcon, PrinterIcon, X } from 'lucide-react';
+import { GlobeIcon, PaletteIcon, PrinterIcon, SlidersHorizontalIcon, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import type { ComponentType } from 'react';
 
+import CustomizabilitySection from '@/components/settings/CustomizabilitySection';
 import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/ui/modal';
 import { Ripple } from '@/components/ui/ripple';
@@ -18,7 +19,6 @@ interface SettingsModalProps {
   printableCount: number;
   isExporting: boolean;
   hasActiveFile: boolean;
-  onPrint: () => void;
   onImportFromWebsite: (url: string, options: ImportExtractionOptions) => Promise<void>;
   onImportFromHtml: (html: string, sourceUrl: string | undefined, options: ImportExtractionOptions) => Promise<void>;
   isImporting: boolean;
@@ -44,7 +44,6 @@ export function SettingsModal({
   printableCount,
   isExporting,
   hasActiveFile,
-  onPrint,
   onImportFromWebsite,
   onImportFromHtml,
   isImporting,
@@ -54,7 +53,9 @@ export function SettingsModal({
 
   const { theme, setTheme } = useTheme();
   const websiteUrlInputRef = useRef<HTMLInputElement | null>(null);
-  const [activeSection, setActiveSection] = useState<'export' | 'import' | 'appearance'>('export');
+  const [activeSection, setActiveSection] = useState<
+    'export' | 'import' | 'appearance' | 'customizability'
+  >('export');
   const [importState, setImportState] = useState(defaultImportState);
 
   const setImportField = <K extends keyof typeof importState>(key: K, value: (typeof importState)[K]) =>
@@ -96,14 +97,17 @@ export function SettingsModal({
 
 
   const sections: Array<{
-    id: 'export' | 'import' | 'appearance';
+    id: 'export' | 'import' | 'appearance' | 'customizability';
     label: string;
     icon: ComponentType<{ size?: number }>;
   }> = [
     { id: 'export', label: 'export', icon: PrinterIcon },
     { id: 'import', label: 'import', icon: GlobeIcon },
     { id: 'appearance', label: 'appearance', icon: PaletteIcon },
+    { id: 'customizability', label: 'customization', icon: SlidersHorizontalIcon },
   ];
+
+  const activeSectionTitle = activeSection === 'customizability' ? 'customization' : activeSection;
 
   const handleImportWebsite = async () => {
     const trimmedUrl = importState.websiteUrl.trim();
@@ -194,7 +198,7 @@ export function SettingsModal({
         <section className="flex min-h-0 flex-col">
           <header className="flex items-center justify-between border-b border-modal-surface-border/70 px-5 py-3">
             <h2 className="font-sans-serif text-[1.18rem] font-medium leading-tight tracking-tight text-modal-surface-foreground">
-              {activeSection}
+              {activeSectionTitle}
             </h2>
             <button
               type="button"
@@ -206,7 +210,7 @@ export function SettingsModal({
             </button>
           </header>
 
-          <div className="flex-1 overflow-hidden px-5 py-4">
+          <div className={cn('flex-1 overflow-hidden', activeSection === 'customizability' ? 'px-0 py-0' : 'px-5 py-4')}>
             {activeSection === 'export' ? (
               <div className="space-y-4">
                 <div className="max-w-135 px-3.5">
@@ -315,7 +319,7 @@ export function SettingsModal({
                       className={cn(
                         'relative rounded-xl border px-3.5 py-2.5 text-left transition-colors',
                         importState.includeFooter
-                          ? 'border-modal-surface-border/65 bg-[var(--import-filter-active-bg)] text-foreground'
+                          ? 'border-modal-surface-border/65 bg-(--import-filter-active-bg) text-foreground'
                           : 'border-transparent bg-transparent text-modal-surface-foreground/74 hover:border-modal-surface-border/45 hover:bg-sidebar-item-hover-bg/22',
                       )}
                     >
@@ -325,18 +329,18 @@ export function SettingsModal({
                       </span>
                       <span
                         className={cn(
-                          'absolute top-2.5 right-2.5 inline-flex h-[18px] w-8 items-center rounded-full p-[2px] overflow-hidden transition-colors',
+                          'absolute top-2.5 right-2.5 inline-flex h-4.5 w-8 items-center rounded-full p-0.5 overflow-hidden transition-colors',
                           importState.includeFooter
-                            ? 'bg-[linear-gradient(90deg,var(--import-toggle-on-start)_0%,var(--import-toggle-on-mid)_50%,var(--import-toggle-on-end)_100%)] ring-1 ring-inset ring-[var(--import-toggle-on-ring)] shadow-none'
-                            : 'bg-[var(--import-toggle-off-track)] ring-1 ring-inset ring-[var(--import-toggle-off-ring)]',
+                            ? 'bg-[linear-gradient(90deg,var(--import-toggle-on-start)_0%,var(--import-toggle-on-mid)_50%,var(--import-toggle-on-end)_100%)] ring-1 ring-inset ring-(--import-toggle-on-ring) shadow-none'
+                            : 'bg-(--import-toggle-off-track) ring-1 ring-inset ring-(--import-toggle-off-ring)',
                         )}
                       >
                         <span
                           className={cn(
-                            'size-[12px] rounded-full transition-transform',
+                            'size-3 rounded-full transition-transform',
                             importState.includeFooter
-                              ? 'translate-x-[15px] bg-[var(--import-toggle-knob-on)]'
-                              : 'translate-x-[1px] bg-[var(--import-toggle-knob-off)]',
+                              ? 'translate-x-3.75 bg-(--import-toggle-knob-on)'
+                              : 'translate-x-px bg-(--import-toggle-knob-off)',
                           )}
                         />
                       </span>
@@ -349,7 +353,7 @@ export function SettingsModal({
                       className={cn(
                         'relative rounded-xl border px-3.5 py-2.5 text-left transition-colors',
                         importState.includeImages
-                          ? 'border-modal-surface-border/65 bg-[var(--import-filter-active-bg)] text-foreground'
+                          ? 'border-modal-surface-border/65 bg-(--import-filter-active-bg) text-foreground'
                           : 'border-transparent bg-transparent text-modal-surface-foreground/74 hover:border-modal-surface-border/45 hover:bg-sidebar-item-hover-bg/22',
                       )}
                     >
@@ -359,18 +363,18 @@ export function SettingsModal({
                       </span>
                       <span
                         className={cn(
-                          'absolute top-2.5 right-2.5 inline-flex h-[18px] w-8 items-center rounded-full p-[2px] overflow-hidden transition-colors',
+                          'absolute top-2.5 right-2.5 inline-flex h-4.5 w-8 items-center rounded-full p-0.5 overflow-hidden transition-colors',
                           importState.includeImages
-                            ? 'bg-[linear-gradient(90deg,var(--import-toggle-on-start)_0%,var(--import-toggle-on-mid)_50%,var(--import-toggle-on-end)_100%)] ring-1 ring-inset ring-[var(--import-toggle-on-ring)] shadow-none'
-                            : 'bg-[var(--import-toggle-off-track)] ring-1 ring-inset ring-[var(--import-toggle-off-ring)]',
+                            ? 'bg-[linear-gradient(90deg,var(--import-toggle-on-start)_0%,var(--import-toggle-on-mid)_50%,var(--import-toggle-on-end)_100%)] ring-1 ring-inset ring-(--import-toggle-on-ring) shadow-none'
+                            : 'bg-(--import-toggle-off-track) ring-1 ring-inset ring-(--import-toggle-off-ring)',
                         )}
                       >
                         <span
                           className={cn(
-                            'size-[12px] rounded-full transition-transform',
+                            'size-3 rounded-full transition-transform',
                             importState.includeImages
-                              ? 'translate-x-[15px] bg-[var(--import-toggle-knob-on)]'
-                              : 'translate-x-[1px] bg-[var(--import-toggle-knob-off)]',
+                              ? 'translate-x-3.75 bg-(--import-toggle-knob-on)'
+                              : 'translate-x-px bg-(--import-toggle-knob-off)',
                           )}
                         />
                       </span>
@@ -441,6 +445,10 @@ export function SettingsModal({
                 {importError ? (
                   <p className="font-sans text-[0.75rem] text-red-400">{importError}</p>
                 ) : null}
+              </div>
+            ) : activeSection === 'customizability' ? (
+              <div className="h-full min-h-0">
+                <CustomizabilitySection onClose={() => onOpenChange(false)} />
               </div>
             ) : (
               <div className="space-y-4">
@@ -554,33 +562,7 @@ export function SettingsModal({
                 />
               </Button>
             </footer>
-          ) : activeSection === 'import' ? (
-            <footer className="flex items-center justify-between gap-4 border-t border-modal-surface-border/70 px-5 py-3">
-              <p className="font-sans text-xs italic text-modal-surface-foreground/60">
-                this creates a new file from extracted content
-              </p>
-              <Button
-                onClick={importState.mode === 'website' ? handleImportWebsite : handleImportHtml}
-                variant="outline"
-                size="lg"
-                disabled={isImporting}
-                className={cn(
-                  'cursor-pointer relative overflow-hidden justify-start gap-2 px-3 py-2 text-sm font-semibold',
-                  'text-sidebar-foreground bg-sidebar-item-hover-bg/60 border-2 border-sidebar-border/70 hover:bg-sidebar-item-hover-bg/80',
-                  'transition-all duration-200 w-fit',
-                  'disabled:cursor-not-allowed disabled:opacity-50',
-                )}
-              >
-                <span className="relative z-10 inline-flex items-center gap-2 font-sans-serif">
-                  {isImporting ? 'importing...' : importState.mode === 'website' ? 'import from website' : 'import from HTML'}
-                </span>
-                <Ripple
-                  duration={1200}
-                  color="color-mix(in srgb, var(--sidebar-item-hover-bg) 82%, transparent)"
-                />
-              </Button>
-            </footer>
-          ) : (
+          ) : activeSection === 'customizability' ? null : (
             <footer className="flex items-center justify-between gap-4 border-t border-modal-surface-border/70 px-5 py-3">
               <p className="font-sans text-xs italic text-modal-surface-foreground/60">
                 we will remember your preference

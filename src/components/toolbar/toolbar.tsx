@@ -275,7 +275,6 @@ export const Toolbar = memo(function Toolbar() {
           printableCount={printableCount}
           isExporting={isExporting}
           hasActiveFile={hasActiveFile}
-          onPrint={handlePrint}
           onImportFromWebsite={handleImportFromWebsite}
           onImportFromHtml={handleImportFromHtml}
           isImporting={isImporting}

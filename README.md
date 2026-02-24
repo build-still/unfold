@@ -51,11 +51,13 @@ pnpm dev:tauri
 
 ## Quality gates
 
-GitHub CI runs on pull requests and validates:
+Local required checks:
 
 - `pnpm install --frozen-lockfile`
 - `pnpm typecheck`
 - `pnpm build`
+
+If repository automation is configured, pull requests should pass those checks as well.
 
 ## Contributing
 

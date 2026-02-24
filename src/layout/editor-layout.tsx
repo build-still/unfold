@@ -1,4 +1,4 @@
-import React, { useEffect, useCallback } from 'react';
+import React, { useEffect, useCallback, useMemo } from 'react';
 import Sidebar from "../components/sidebar/sidebar";
 import { Toolbar } from "../components/toolbar/toolbar";
 import { useLayout } from '@/contexts/LayoutContext';
@@ -13,6 +13,11 @@ import {
   useSyncActiveFileSelection,
   useSyncActiveSpaceSelection,
 } from '@/store/hooks/use-filesystem-store';
+import { useAppSelector } from '@/store/hooks';
+import { selectActiveSpaceId } from '@/store/selectors';
+import { resolveCustomizationProperties } from '@/services/customizationResolver';
+
+const APP_SCOPE_ID = 'app-default';
 
 function LoadingScreen() {
   return <WorkspaceSkeleton />;
@@ -23,12 +28,92 @@ function EditorLayoutContent({children}: {children?: React.ReactNode}) {
   const { layout } = useLayout();
   const { pageEditorRef } = useEditorContext();
   const { state: sidebarState, isMobile } = useSidebar();
+  const customizationState = useAppSelector((state) => state.customization);
+  const activeSpaceId = useAppSelector(selectActiveSpaceId);
   useSyncActiveSpaceSelection(spaceId ?? null);
   useSyncActiveFileSelection(fileId ?? null);
 
   useGlobalSidebarShortcuts();
 
   const sidebarPosition = layout.sidebar_position || 'left';
+
+  const resolvedCustomization = useMemo(() => {
+    const appSettings = customizationState.byThemeId[APP_SCOPE_ID];
+    const spaceSettings = customizationState.bySpaceId[activeSpaceId];
+    return resolveCustomizationProperties(appSettings?.properties, spaceSettings?.properties);
+  }, [activeSpaceId, customizationState.byThemeId, customizationState.bySpaceId]);
+
+  const customizationStyles = useMemo(() => {
+    const styles: Record<string, string> = {};
+
+    const editorFont = resolvedCustomization['editor.fontFamily']?.value;
+    if (typeof editorFont === 'string') {
+      styles['--custom-editor-font'] = editorFont;
+    }
+
+    const titleFont = resolvedCustomization['title.fontFamily']?.value;
+    if (typeof titleFont === 'string') {
+      styles['--custom-title-font'] = titleFont;
+    }
+
+    const bodyFont = resolvedCustomization['body.fontFamily']?.value;
+    if (typeof bodyFont === 'string') {
+      styles['--font-sans'] = bodyFont;
+    }
+
+    const codeFont = resolvedCustomization['code.fontFamily']?.value;
+    if (typeof codeFont === 'string') {
+      styles['--custom-code-font'] = codeFont;
+    }
+
+    const h1Font = resolvedCustomization['h1.fontFamily']?.value;
+    if (typeof h1Font === 'string') {
+      styles['--custom-h1-font'] = h1Font;
+    }
+
+    const h2Font = resolvedCustomization['h2.fontFamily']?.value;
+    if (typeof h2Font === 'string') {
+      styles['--custom-h2-font'] = h2Font;
+    }
+
+    const h3Font = resolvedCustomization['h3.fontFamily']?.value;
+    if (typeof h3Font === 'string') {
+      styles['--custom-h3-font'] = h3Font;
+    }
+
+    const editorSize = resolvedCustomization['editor.fontSize']?.value;
+    if (typeof editorSize === 'number') {
+      styles['--font-size-editor-base'] = `${editorSize}px`;
+      styles['--font-size-note'] = `${editorSize}px`;
+    }
+
+    const titleSize = resolvedCustomization['title.fontSize']?.value;
+    if (typeof titleSize === 'number') {
+      styles['--font-size-document-title'] = `${titleSize}px`;
+    }
+
+    const codeSize = resolvedCustomization['code.fontSize']?.value;
+    if (typeof codeSize === 'number') {
+      styles['--font-size-code'] = `${codeSize}px`;
+    }
+
+    const h1Size = resolvedCustomization['h1.fontSize']?.value;
+    if (typeof h1Size === 'number') {
+      styles['--font-size-heading-1'] = `${h1Size}px`;
+    }
+
+    const h2Size = resolvedCustomization['h2.fontSize']?.value;
+    if (typeof h2Size === 'number') {
+      styles['--font-size-heading-2'] = `${h2Size}px`;
+    }
+
+    const h3Size = resolvedCustomization['h3.fontSize']?.value;
+    if (typeof h3Size === 'number') {
+      styles['--font-size-heading-3'] = `${h3Size}px`;
+    }
+
+    return styles;
+  }, [resolvedCustomization]);
 
   const handleKeydown = useCallback((e: KeyboardEvent) => {
     const isFindShortcut = (e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'f';
@@ -56,6 +141,7 @@ function EditorLayoutContent({children}: {children?: React.ReactNode}) {
     <div
       className="flex flex-col relative bg-background h-screen w-screen"
       data-tauri-drag-region
+      style={customizationStyles as React.CSSProperties}
     >
       {/* Top Toolbar */}
       <Toolbar />

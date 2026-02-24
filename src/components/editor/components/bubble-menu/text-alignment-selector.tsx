@@ -87,7 +87,7 @@ export const TextAlignmentSelector: FC<TextAlignmentProps> = ({
         <TooltipTrigger asChild>
           <DropdownMenuTrigger asChild>
             <Button
-              variant="secondary"
+              variant="ghost"
               size="sm"
               className="h-8 gap-1 px-2 rounded-lg"
               onMouseDown={(e) => e.preventDefault()}
