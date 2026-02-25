@@ -1,5 +1,8 @@
-import { cn as cnUtil } from './tiptap-utils';
+import { clsx, type ClassValue } from 'clsx';
+import { twMerge } from 'tailwind-merge';
 
-export { cnUtil as cn };
+export function cn(...inputs: ClassValue[]): string {
+  return twMerge(clsx(inputs));
+}
 
 

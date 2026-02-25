@@ -57,6 +57,10 @@ type InvokeMap = {
         args: { url: string };
         returnType: void;
     };
+    get_system_fonts: {
+        args: {};
+        returnType: string[];
+    };
 };
 
 type InvocationName = keyof InvokeMap;

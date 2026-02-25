@@ -56,6 +56,7 @@ fn main() {
             commands::save_image_file,
             commands::fetch_website_html,
             commands::open_external_url,
+            commands::get_system_fonts,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

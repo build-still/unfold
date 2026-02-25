@@ -27,10 +27,7 @@ interface SettingsModalProps {
 }
 
 const defaultImportState = {
-  mode: 'website' as 'website' | 'html',
   websiteUrl: '',
-  sourceUrl: '',
-  htmlInput: '',
   includeFooter: false,
   includeImages: true,
   localError: null as string | null,
@@ -45,7 +42,6 @@ export function SettingsModal({
   isExporting,
   hasActiveFile,
   onImportFromWebsite,
-  onImportFromHtml,
   isImporting,
   importError,
   onExport,
@@ -69,10 +65,10 @@ export function SettingsModal({
   }, [open]);
 
   useEffect(() => {
-    if (open && activeSection === 'import' && importState.mode === 'website') {
+    if (open && activeSection === 'import') {
       websiteUrlInputRef.current?.focus();
     }
-  }, [activeSection, importState.mode, open]);
+  }, [activeSection, open]);
 
   const scopeOptions: Array<{
     value: PrintScope;
@@ -109,35 +105,26 @@ export function SettingsModal({
 
   const activeSectionTitle = activeSection === 'customizability' ? 'customization' : activeSection;
 
+  const trimmedWebsiteUrl = importState.websiteUrl.trim();
+  const isWebsiteUrlValid = trimmedWebsiteUrl.length > 0 && trimmedWebsiteUrl.toLowerCase().startsWith('https://');
+
   const handleImportWebsite = async () => {
-    const trimmedUrl = importState.websiteUrl.trim();
-    if (!trimmedUrl) {
-      setImportField('localError', 'Enter a website URL.');
+    if (!trimmedWebsiteUrl) {
+      setImportField('localError', 'Enter a website URL that starts with https://');
+      return;
+    }
+
+    if (!trimmedWebsiteUrl.toLowerCase().startsWith('https://')) {
+      setImportField('localError', 'Enter a website URL that starts with https://');
       return;
     }
 
     setImportField('localError', null);
-    await onImportFromWebsite(trimmedUrl, {
+    await onImportFromWebsite(trimmedWebsiteUrl, {
       includeFooter: importState.includeFooter,
       includeImages: importState.includeImages,
     });
   };
-
-  const handleImportHtml = async () => {
-    const trimmedHtml = importState.htmlInput.trim();
-    if (!trimmedHtml) {
-      setImportField('localError', 'Paste HTML content to import.');
-      return;
-    }
-
-    setImportField('localError', null);
-    const trimmedSourceUrl = importState.sourceUrl.trim();
-    await onImportFromHtml(trimmedHtml, trimmedSourceUrl || undefined, {
-      includeFooter: importState.includeFooter,
-      includeImages: importState.includeImages,
-    });
-  };
-
   return (
     <Modal
       open={open}
@@ -210,17 +197,22 @@ export function SettingsModal({
             </button>
           </header>
 
-          <div className={cn('flex-1 overflow-hidden', activeSection === 'customizability' ? 'px-0 py-0' : 'px-5 py-4')}>
+          <div
+            className={cn(
+              'flex-1 min-h-0',
+              activeSection === 'customizability' ? 'overflow-hidden px-0 py-0' : 'overflow-y-auto px-5 py-4',
+            )}
+          >
             {activeSection === 'export' ? (
-              <div className="space-y-4">
-                <div className="max-w-135 px-3.5">
+              <div className="mx-auto w-full max-w-135 space-y-2.5">
+                <div className="w-full px-3.5">
                   <p className="whitespace-nowrap text-right font-sans text-[0.82rem] font-medium tracking-[0.02em] text-modal-surface-foreground/92">
                     print scope
                   </p>
                 </div>
 
                 <div className="space-y-3">
-                  <div className="max-w-135 overflow-hidden rounded-xl border border-modal-surface-border/55 bg-sidebar-container-bg">
+                  <div className="w-full overflow-hidden rounded-xl border border-modal-surface-border/55 bg-sidebar-container-bg">
                     {scopeOptions.map((option, index) => {
                       const selected = printScope === option.value;
                       return (
@@ -269,179 +261,124 @@ export function SettingsModal({
                 </div>
               </div>
             ) : activeSection === 'import' ? (
-              <div className="space-y-5">
-                <div className="rounded-xl border border-modal-surface-border/55 bg-sidebar-item-hover-bg/25 px-3.5 py-2.5">
-                  <p className="font-sans text-[0.76rem] leading-snug text-modal-surface-foreground/74">
-                    import only from websites you trust imported content may include unsafe markup large pages are trimmed automatically
+              <div className="mx-auto w-full max-w-135 space-y-2.5">
+                <div className="w-full px-3.5">
+                  <p className="whitespace-nowrap text-right font-sans text-[0.82rem] font-medium tracking-[0.02em] text-modal-surface-foreground/92">
+                    from website
                   </p>
                 </div>
 
-                <div className="w-full overflow-hidden rounded-2xl border border-modal-surface-border/55 bg-sidebar-container-bg p-1.5">
-                  <div className="grid grid-cols-2 gap-1.5">
-                    <button
-                      type="button"
-                      onClick={() => setImportField('mode', 'website')}
-                      aria-pressed={importState.mode === 'website'}
-                      className={cn(
-                        'rounded-xl px-3 py-2 text-[0.78rem] font-medium transition-colors',
-                        importState.mode === 'website'
-                          ? 'bg-sidebar-item-hover-bg/70 text-foreground border border-border-elevated'
-                          : 'border border-transparent text-modal-surface-foreground/72 hover:bg-sidebar-item-hover-bg/35',
-                      )}
-                    >
-                      from website
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setImportField('mode', 'html')}
-                      aria-pressed={importState.mode === 'html'}
-                      className={cn(
-                        'rounded-xl px-3 py-2 text-[0.78rem] font-medium transition-colors',
-                        importState.mode === 'html'
-                          ? 'bg-sidebar-item-hover-bg/70 text-foreground border border-border-elevated'
-                          : 'border border-transparent text-modal-surface-foreground/72 hover:bg-sidebar-item-hover-bg/35',
-                      )}
-                    >
-                      from HTML
-                    </button>
+                <div className="w-full px-3.5">
+                  <div className="w-full overflow-hidden rounded-xl border border-modal-surface-border/55 bg-sidebar-item-hover-bg/10 ring-1 ring-modal-surface-border/30">
+                    <div className="space-y-2.5 px-3.5 py-3">
+                      <div className="space-y-1">
+                        <label className="block font-sans text-[0.82rem] font-medium tracking-[0.02em] text-modal-surface-foreground/92">
+                          website url
+                        </label>
+                        <input
+                          ref={websiteUrlInputRef}
+                          type="text"
+                          value={importState.websiteUrl}
+                          onChange={(event) => {
+                            const value = event.target.value;
+                            setImportField('websiteUrl', value);
+                            if (importState.localError) {
+                              setImportField('localError', null);
+                            }
+                          }}
+                          placeholder="https://example.com/article"
+                          className={cn(
+                            'w-full rounded-xl border border-modal-surface-border/50 bg-sidebar-container-bg px-3 py-2',
+                            'font-sans text-[0.82rem] text-modal-surface-foreground/92',
+                            'placeholder:text-[0.76rem] placeholder:font-normal placeholder:text-modal-surface-foreground/48',
+                            'focus:outline-none focus:ring-0 focus-visible:ring-0 focus:border-modal-surface-border/80',
+                          )}
+                        />
+                        </div>
+                      {importState.localError ? (
+                        <p className="font-sans text-[0.75rem] text-menu-item-destructive-text">
+                          {importState.localError}
+                        </p>
+                      ) : null}
+
+                      <div className="space-y-2">
+                        <p className="font-sans text-[0.82rem] font-medium tracking-[0.02em] text-modal-surface-foreground/92">
+                          import filters
+                        </p>
+                        <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2">
+                          <button
+                            type="button"
+                            aria-pressed={importState.includeFooter}
+                            onClick={() => setImportField('includeFooter', !importState.includeFooter)}
+                            className={cn(
+                              'relative rounded-xl border px-3.5 py-2.5 text-left transition-colors',
+                              importState.includeFooter
+                                ? 'border-modal-surface-border/65 bg-import-filter text-foreground'
+                                : 'border-modal-surface-border/55 bg-sidebar-container-bg/80 text-modal-surface-foreground/80 hover:border-modal-surface-border/70 hover:bg-sidebar-container-bg/60',
+                            )}
+                          >
+                            <span className="block font-sans-serif text-[0.79rem] leading-tight">include footer</span>
+                            <span className="block pt-1 font-sans text-[0.69rem] leading-tight text-modal-surface-foreground/58">
+                              keep footer notes and links
+                            </span>
+                            <span
+                              className={cn(
+                                'absolute top-2.5 right-2.5 inline-flex h-4.5 w-8 items-center rounded-full p-0.5 overflow-hidden transition-colors',
+                                importState.includeFooter
+                                  ? 'bg-highlight-vivid ring-1 ring-inset ring-highlight-vivid/50 shadow-none'
+                                  : 'bg-(--import-toggle-off-track) ring-1 ring-inset ring-(--import-toggle-off-ring)',
+                              )}
+                            >
+                              <span
+                                className={cn(
+                                  'size-3 rounded-full transition-transform',
+                                  importState.includeFooter
+                                    ? 'translate-x-3.75 bg-(--import-toggle-knob-on)'
+                                    : 'translate-x-px bg-(--import-toggle-knob-off)',
+                                )}
+                              />
+                            </span>
+                          </button>
+
+                          <button
+                            type="button"
+                            aria-pressed={importState.includeImages}
+                            onClick={() => setImportField('includeImages', !importState.includeImages)}
+                            className={cn(
+                              'relative rounded-xl border px-3.5 py-2.5 text-left transition-colors',
+                              importState.includeImages
+                                ? 'border-modal-surface-border/65 bg-import-filter text-foreground'
+                                : 'border-modal-surface-border/55 bg-sidebar-container-bg/80 text-modal-surface-foreground/80 hover:border-modal-surface-border/70 hover:bg-sidebar-container-bg/60',
+                            )}
+                          >
+                            <span className="block font-sans-serif text-[0.79rem] leading-tight">include images</span>
+                            <span className="block pt-1 font-sans text-[0.69rem] leading-tight text-modal-surface-foreground/58">
+                              keep inline media from article body
+                            </span>
+                            <span
+                              className={cn(
+                                'absolute top-2.5 right-2.5 inline-flex h-4.5 w-8 items-center rounded-full p-0.5 overflow-hidden transition-colors',
+                                importState.includeImages
+                                  ? 'bg-highlight-vivid ring-1 ring-inset ring-highlight-vivid/50 shadow-none'
+                                  : 'bg-(--import-toggle-off-track) ring-1 ring-inset ring-(--import-toggle-off-ring)',
+                              )}
+                            >
+                              <span
+                                className={cn(
+                                  'size-3 rounded-full transition-transform',
+                                  importState.includeImages
+                                    ? 'translate-x-3.75 bg-(--import-toggle-knob-on)'
+                                    : 'translate-x-px bg-(--import-toggle-knob-off)',
+                                )}
+                              />
+                            </span>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <p className="px-0.5 font-sans text-[0.7rem] tracking-wide text-modal-surface-foreground/50">
-                    import filters
-                  </p>
-                  <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2">
-                    <button
-                      type="button"
-                      aria-pressed={importState.includeFooter}
-                      onClick={() => setImportField('includeFooter', !importState.includeFooter)}
-                      className={cn(
-                        'relative rounded-xl border px-3.5 py-2.5 text-left transition-colors',
-                        importState.includeFooter
-                          ? 'border-modal-surface-border/65 bg-(--import-filter-active-bg) text-foreground'
-                          : 'border-transparent bg-transparent text-modal-surface-foreground/74 hover:border-modal-surface-border/45 hover:bg-sidebar-item-hover-bg/22',
-                      )}
-                    >
-                      <span className="block font-sans-serif text-[0.79rem] leading-tight">include footer</span>
-                      <span className="block pt-1 font-sans text-[0.69rem] leading-tight text-modal-surface-foreground/58">
-                        keep footer notes and links
-                      </span>
-                      <span
-                        className={cn(
-                          'absolute top-2.5 right-2.5 inline-flex h-4.5 w-8 items-center rounded-full p-0.5 overflow-hidden transition-colors',
-                          importState.includeFooter
-                            ? 'bg-[linear-gradient(90deg,var(--import-toggle-on-start)_0%,var(--import-toggle-on-mid)_50%,var(--import-toggle-on-end)_100%)] ring-1 ring-inset ring-(--import-toggle-on-ring) shadow-none'
-                            : 'bg-(--import-toggle-off-track) ring-1 ring-inset ring-(--import-toggle-off-ring)',
-                        )}
-                      >
-                        <span
-                          className={cn(
-                            'size-3 rounded-full transition-transform',
-                            importState.includeFooter
-                              ? 'translate-x-3.75 bg-(--import-toggle-knob-on)'
-                              : 'translate-x-px bg-(--import-toggle-knob-off)',
-                          )}
-                        />
-                      </span>
-                    </button>
-
-                    <button
-                      type="button"
-                      aria-pressed={importState.includeImages}
-                      onClick={() => setImportField('includeImages', !importState.includeImages)}
-                      className={cn(
-                        'relative rounded-xl border px-3.5 py-2.5 text-left transition-colors',
-                        importState.includeImages
-                          ? 'border-modal-surface-border/65 bg-(--import-filter-active-bg) text-foreground'
-                          : 'border-transparent bg-transparent text-modal-surface-foreground/74 hover:border-modal-surface-border/45 hover:bg-sidebar-item-hover-bg/22',
-                      )}
-                    >
-                      <span className="block font-sans-serif text-[0.79rem] leading-tight">include images</span>
-                      <span className="block pt-1 font-sans text-[0.69rem] leading-tight text-modal-surface-foreground/58">
-                        keep inline media from article body
-                      </span>
-                      <span
-                        className={cn(
-                          'absolute top-2.5 right-2.5 inline-flex h-4.5 w-8 items-center rounded-full p-0.5 overflow-hidden transition-colors',
-                          importState.includeImages
-                            ? 'bg-[linear-gradient(90deg,var(--import-toggle-on-start)_0%,var(--import-toggle-on-mid)_50%,var(--import-toggle-on-end)_100%)] ring-1 ring-inset ring-(--import-toggle-on-ring) shadow-none'
-                            : 'bg-(--import-toggle-off-track) ring-1 ring-inset ring-(--import-toggle-off-ring)',
-                        )}
-                      >
-                        <span
-                          className={cn(
-                            'size-3 rounded-full transition-transform',
-                            importState.includeImages
-                              ? 'translate-x-3.75 bg-(--import-toggle-knob-on)'
-                              : 'translate-x-px bg-(--import-toggle-knob-off)',
-                          )}
-                        />
-                      </span>
-                    </button>
-                  </div>
-                </div>
-
-                {importState.mode === 'website' ? (
-                  <div className="space-y-2">
-                    <label className="block font-sans text-[0.73rem] tracking-wide text-modal-surface-foreground/55">
-                      website url
-                    </label>
-                    <input
-                      ref={websiteUrlInputRef}
-                      type="text"
-                      value={importState.websiteUrl}
-                      onChange={(event) => setImportField('websiteUrl', event.target.value)}
-                      placeholder="https://example.com/article"
-                      className={cn(
-                        'w-full rounded-xl border border-modal-surface-border/55 bg-sidebar-container-bg px-3 py-2',
-                        'font-sans text-[0.82rem] text-modal-surface-foreground/92',
-                        'placeholder:text-[0.76rem] placeholder:font-normal placeholder:text-modal-surface-foreground/48',
-                        'focus:outline-none focus:ring-0 focus-visible:ring-0 focus:border-modal-surface-border/80',
-                      )}
-                    />
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    <div className="space-y-2">
-                      <label className="block font-sans text-[0.73rem] tracking-wide text-modal-surface-foreground/55">
-                        source url (optional)
-                      </label>
-                      <input
-                        type="text"
-                        value={importState.sourceUrl}
-                        onChange={(event) => setImportField('sourceUrl', event.target.value)}
-                        placeholder="https://example.com/source"
-                        className={cn(
-                          'w-full rounded-xl border border-modal-surface-border/55 bg-sidebar-container-bg px-3 py-2',
-                          'font-sans text-[0.82rem] text-modal-surface-foreground/92',
-                          'placeholder:text-[0.76rem] placeholder:font-normal placeholder:text-modal-surface-foreground/48',
-                          'focus:outline-none focus:ring-0 focus-visible:ring-0 focus:border-modal-surface-border/80',
-                        )}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="block font-sans text-[0.73rem] tracking-wide text-modal-surface-foreground/55">
-                        html
-                      </label>
-                        <textarea
-                          value={importState.htmlInput}
-                          onChange={(event) => setImportField('htmlInput', event.target.value)}
-                          placeholder="<html>...</html>"
-                          className={cn(
-                          'h-44 w-full resize-none rounded-xl border border-modal-surface-border/55 bg-sidebar-container-bg px-3 py-2',
-                          'font-mono text-[0.75rem] text-modal-surface-foreground/92',
-                          'placeholder:text-[0.73rem] placeholder:font-normal placeholder:text-modal-surface-foreground/48',
-                          'focus:outline-none focus:ring-0 focus-visible:ring-0 focus:border-modal-surface-border/80',
-                        )}
-                      />
-                    </div>
-                  </div>
-                )}
-
-                {importState.localError ? (
-                  <p className="font-sans text-[0.75rem] text-red-400">{importState.localError}</p>
-                ) : null}
                 {importError ? (
                   <p className="font-sans text-[0.75rem] text-red-400">{importError}</p>
                 ) : null}
@@ -451,15 +388,15 @@ export function SettingsModal({
                 <CustomizabilitySection onClose={() => onOpenChange(false)} />
               </div>
             ) : (
-              <div className="space-y-4">
-                <div className="max-w-135 px-3.5">
+              <div className="mx-auto w-full max-w-135 space-y-2.5">
+                <div className="w-full px-3.5">
                   <p className="whitespace-nowrap text-right font-sans text-[0.82rem] font-medium tracking-[0.02em] text-modal-surface-foreground/92">
                     color theme
                   </p>
                 </div>
 
                 <div className="space-y-3">
-                  <div className="max-w-135 overflow-hidden rounded-xl border border-modal-surface-border/55 bg-sidebar-container-bg">
+                  <div className="w-full overflow-hidden rounded-xl border border-modal-surface-border/55 bg-sidebar-container-bg">
                     {appearanceOptions.map((option, index) => {
                       const selected = theme === option.value;
 
@@ -542,10 +479,10 @@ export function SettingsModal({
                 this creates a new file from extracted content
               </p>
               <Button
-                onClick={importState.mode === 'website' ? handleImportWebsite : handleImportHtml}
+                onClick={handleImportWebsite}
                 variant="outline"
                 size="lg"
-                disabled={isImporting}
+                disabled={!isWebsiteUrlValid || isImporting}
                 className={cn(
                   'cursor-pointer relative overflow-hidden justify-start gap-2 px-3 py-2 text-sm font-semibold',
                   'text-sidebar-foreground bg-sidebar-item-hover-bg/60 border-2 border-sidebar-border/70 hover:bg-sidebar-item-hover-bg/80',
@@ -554,7 +491,7 @@ export function SettingsModal({
                 )}
               >
                 <span className="relative z-10 inline-flex items-center gap-2 font-sans-serif">
-                  {isImporting ? 'importing...' : importState.mode === 'website' ? 'import from website' : 'import from HTML'}
+                  {isImporting ? 'importing...' : 'import from website'}
                 </span>
                 <Ripple
                   duration={1200}

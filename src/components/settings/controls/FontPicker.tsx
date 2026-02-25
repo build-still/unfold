@@ -1,5 +1,6 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
+import invoke from '@/utils/invoke';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -14,56 +15,85 @@ interface FontPickerProps {
   onChange: (value: string) => void;
   error?: string | null;
   helperText?: string;
+  monospaceOnly?: boolean;
 }
 
-const FALLBACK_FONTS = [
-  'Bricolage Grotesque',
-  'DM Sans',
-  'Google Sans Code',
-  'Inter',
-  'Arial',
-  'Helvetica',
-  'Georgia',
-  'Times New Roman',
-  'Courier New',
-];
+/**
+ * Keywords used to identify monospace fonts from the system font list.
+ * Applied as substring matches against the lowercase font family name.
+ */
+const MONOSPACE_KEYWORDS = [
+  'mono',
+  'code',
+  'console',
+  'courier',
+  'menlo',
+  'consolas',
+  'hack',
+  'inconsolata',
+] as const;
 
-function getAvailableFonts(): string[] {
-  if (typeof document === 'undefined' || !('fonts' in document)) {
-    return FALLBACK_FONTS;
-  }
+function isMonospaceFont(fontName: string): boolean {
+  const lower = fontName.toLowerCase();
+  return MONOSPACE_KEYWORDS.some((kw) => lower.includes(kw));
+}
 
-  const fontSet = document.fonts as FontFaceSet;
-  const families = new Set<string>();
+let cachedSystemFonts: string[] | null = null;
 
-  fontSet.forEach((fontFace) => {
-    if (fontFace.family) {
-      families.add(fontFace.family.replace(/^"|"$/g, ''));
+const FontPicker: React.FC<FontPickerProps> = ({ label, value, onChange, error, helperText, monospaceOnly }) => {
+  const [systemFonts, setSystemFonts] = useState<string[]>(cachedSystemFonts || []);
+
+  useEffect(() => {
+    if (cachedSystemFonts) return;
+
+    let isMounted = true;
+    invoke('get_system_fonts', {})
+      .then((fonts) => {
+        if (isMounted) {
+          cachedSystemFonts = fonts;
+          setSystemFonts(fonts);
+        }
+      })
+      .catch((err) => {
+        console.error('Failed to fetch system fonts:', err);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const availableFonts = useMemo(() => {
+    const base = new Set<string>();
+
+    if (monospaceOnly) {
+      systemFonts.forEach((font) => {
+        if (isMonospaceFont(font)) base.add(font);
+      });
+    } else {
+      systemFonts.forEach((font) => base.add(font));
     }
-  });
 
-  FALLBACK_FONTS.forEach((font) => families.add(font));
-
-  return Array.from(families).sort((a, b) => a.localeCompare(b));
-}
-
-const FontPicker: React.FC<FontPickerProps> = ({ label, value, onChange, error, helperText }) => {
-  const availableFonts = useMemo(() => getAvailableFonts(), []);
+    // Always include the current value
+    if (value) base.add(value);
+    
+    return Array.from(base).sort((a, b) => a.localeCompare(b));
+  }, [monospaceOnly, value, systemFonts]);
 
   return (
     <div className="space-y-1.5">
-      <span className="text-[10px] font-medium text-modal-surface-foreground/65">{label}</span>
+      <span className="pl-2.5 text-[10px] font-medium text-modal-surface-foreground/65">{label}</span>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <div
             role="button"
             tabIndex={0}
             className={cn(
-              'flex h-8 w-full cursor-pointer items-center justify-between rounded-md border-b border-modal-surface-border/75',
+              'flex h-8 w-full cursor-pointer items-center justify-between rounded-none border-b border-modal-surface-border/75',
               'bg-sidebar-container-bg/90 px-2.5 text-xs text-modal-surface-foreground/85',
               'transition-colors hover:bg-sidebar-item-hover-bg/25',
-              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-button-ring',
-              error && 'border-destructive/50 ring-destructive/20',
+              'focus-visible:outline-none',
+              error && 'border-destructive/50',
             )}
           >
             <span className="truncate">{value}</span>
@@ -71,15 +101,18 @@ const FontPicker: React.FC<FontPickerProps> = ({ label, value, onChange, error, 
           </div>
         </DropdownMenuTrigger>
         <DropdownMenuContent
+          side="bottom"
+          sideOffset={6}
+          avoidCollisions={false}
           align="start"
-          className="max-h-64 w-(--radix-dropdown-menu-trigger-width) overflow-y-auto border-modal-surface-border/75 bg-sidebar-container-bg"
+          className="w-34 max-h-40 overflow-y-auto gap-.5 rounded-xl border border-sidebar-container-border/80 bg-sidebar-container-bg shadow-dropdown dropdown-darker-scroll"
         >
           {availableFonts.map((font) => (
             <DropdownMenuItem
               key={font}
               onClick={() => onChange(font)}
               className={cn(
-                'rounded-md text-[11px] text-modal-surface-foreground/85',
+                'rounded-lg text-[11px] text-modal-surface-foreground/85 hover:bg-hover-bg-strong data-highlighted:bg-hover-bg-strong data-highlighted:text-foreground data-highlighted:shadow-menu-item',
                 value === font && 'bg-sidebar-item-hover-bg/70 text-modal-surface-foreground',
               )}
             >
