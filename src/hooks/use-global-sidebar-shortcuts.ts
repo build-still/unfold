@@ -4,6 +4,7 @@ import { useParams, useNavigate } from '@tanstack/react-router';
 import { useFileSystem } from '@/contexts/FileSystemContext';
 import { useEditorContext } from '@/contexts/EditorContext';
 import { KEYBOARD_SHORTCUTS } from '@/config/keyboard-shortcuts';
+import { dispatchAppEvent, APP_EVENTS } from '@/lib/app-events';
 
 const parseAccelerator = (accelerator: string) => {
   const parts = accelerator.split('+');
@@ -76,14 +77,13 @@ export function  useGlobalSidebarShortcuts() {
         (!deleteShortcut.requiresShift || isShift)
       ) {
         event.preventDefault();
-        window.dispatchEvent(
-          new CustomEvent('sidebar:delete-node', { detail: { nodeId: fileId } })
-        );
+        dispatchAppEvent(APP_EVENTS.SIDEBAR_DELETE_NODE, { nodeId: fileId });
         return;
       }
 
       if (
         fileId &&
+        !isEditingContent() &&
         event.key.toLowerCase() === pinShortcut.key.toLowerCase() &&
         (!pinShortcut.requiresCmdOrCtrl || isCmdOrCtrl) &&
         (!pinShortcut.requiresAlt || isAlt) &&

@@ -2,10 +2,14 @@ import { GlobeIcon, PaletteIcon, PrinterIcon, SlidersHorizontalIcon, X } from 'l
 import { useEffect, useRef, useState } from 'react';
 import type { ComponentType } from 'react';
 
-import CustomizabilitySection from '@/components/settings/CustomizabilitySection';
-import { Button } from '@/components/ui/button';
+import { PanelCard } from '@/components/atoms/panel-card';
+import { SelectableRow } from '@/components/atoms/selectable-row';
+import { ChoiceRow } from '@/components/molecules/choice-row';
+import { FooterActionBar } from '@/components/molecules/footer-action-bar';
+import { FormField } from '@/components/molecules/form-field';
+import { FilterToggleCard } from '@/components/molecules/filter-toggle-card';
+import CustomizabilitySection from '@/components/settings/customizability-section';
 import { Modal } from '@/components/ui/modal';
-import { Ripple } from '@/components/ui/ripple';
 import { ThemePreference, useTheme } from '@/contexts/ThemeContext';
 import { cn } from '@/lib/tiptap-utils';
 import { PrintScope } from '@/utils/print';
@@ -150,11 +154,11 @@ export function SettingsModal({
               const Icon = section.icon;
 
               return (
-                <div
+                <SelectableRow
                   key={section.id}
+                  as="div"
                   role="button"
                   tabIndex={0}
-                  aria-pressed={selected}
                   aria-current={selected ? 'page' : undefined}
                   onClick={() => setActiveSection(section.id)}
                   onKeyDown={(event) => {
@@ -163,20 +167,14 @@ export function SettingsModal({
                       setActiveSection(section.id);
                     }
                   }}
-                  className={cn(
-                    'relative overflow-hidden group/space flex items-center gap-2 w-full min-w-0 rounded-xl border px-3 py-1.5 text-[0.84rem] font-normal text-left leading-tight transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-button-ring',
-                    selected
-                      ? 'bg-sidebar-item-hover-bg/80 text-foreground border-border-elevated'
-                      : 'bg-transparent border-transparent text-sidebar-foreground/90 hover:text-foreground hover:bg-sidebar-item-hover-bg/45',
-                  )}
+                  selected={selected}
+                  className="group/space relative w-full px-3 py-1.5 font-normal leading-tight"
+                  selectedClassName="bg-sidebar-item-hover-bg/80 text-foreground border-border-elevated"
+                  unselectedClassName="bg-transparent border-transparent text-sidebar-foreground/90 hover:text-foreground hover:bg-sidebar-item-hover-bg/45"
+                  leading={<Icon size={12} />}
                 >
-                  <Icon size={12} />
-                  <span className="truncate select-none font-sans-serif text-inherit">{section.label}</span>
-                  <Ripple
-                    duration={1200}
-                    color="color-mix(in srgb, var(--sidebar-item-hover-bg) 85%, transparent)"
-                  />
-                </div>
+                  <span className="flex-1 min-w-0 truncate select-none font-sans-serif text-sm text-inherit">{section.label}</span>
+                </SelectableRow>
               );
             })}
           </div>
@@ -212,52 +210,22 @@ export function SettingsModal({
                 </div>
 
                 <div className="space-y-3">
-                  <div className="w-full overflow-hidden rounded-xl border border-modal-surface-border/55 bg-sidebar-container-bg">
+                  <PanelCard>
                     {scopeOptions.map((option, index) => {
                       const selected = printScope === option.value;
                       return (
-                        <button
+                        <ChoiceRow
                           key={option.value}
-                          type="button"
                           disabled={option.disabled}
                           onClick={() => onScopeChange(option.value)}
-                          className={cn(
-                            'group relative flex w-full items-start justify-between gap-3 overflow-hidden text-left',
-                            'px-3.5 py-2.5 transition-colors duration-100',
-                            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-button-ring',
-                            selected
-                              ? 'bg-sidebar-item-hover-bg/55 text-modal-surface-foreground'
-                              : 'bg-transparent text-modal-surface-foreground/80 hover:bg-sidebar-item-hover-bg/30',
-                            option.disabled && 'cursor-not-allowed opacity-45',
-                          )}
-                        >
-                          <div className="relative z-10 min-w-0 space-y-0.5">
-                            <p className="font-sans-serif text-[0.84rem] font-medium leading-tight">{option.title}</p>
-                            <p className="font-sans text-[0.72rem] leading-snug text-modal-surface-foreground/58">
-                              {option.subtitle}
-                            </p>
-                          </div>
-                          <span
-                            className={cn(
-                              'relative z-10 mt-0.5 inline-flex size-5 shrink-0 items-center justify-center rounded-full border',
-                              selected
-                                ? 'border-2 border-sidebar-border/70 bg-sidebar-item-hover-bg/60 text-modal-surface-foreground/85'
-                                : 'border-modal-surface-border/55 text-transparent',
-                            )}
-                          >
-                            {selected ? <span className="size-2 rounded-full bg-modal-surface-foreground/68" /> : null}
-                          </span>
-                          <Ripple
-                            duration={1200}
-                            color="color-mix(in srgb, var(--sidebar-item-hover-bg) 85%, transparent)"
-                          />
-                          {index < scopeOptions.length - 1 ? (
-                            <span className="pointer-events-none absolute right-3 left-3 bottom-0 h-px bg-modal-surface-border/45" />
-                          ) : null}
-                        </button>
+                          selected={selected}
+                          title={option.title}
+                          subtitle={option.subtitle}
+                          showDivider={index < scopeOptions.length - 1}
+                        />
                       );
                     })}
-                  </div>
+                  </PanelCard>
                 </div>
               </div>
             ) : activeSection === 'import' ? (
@@ -269,12 +237,13 @@ export function SettingsModal({
                 </div>
 
                 <div className="w-full px-3.5">
-                  <div className="w-full overflow-hidden rounded-xl border border-modal-surface-border/55 bg-sidebar-item-hover-bg/10 ring-1 ring-modal-surface-border/30">
+                  <PanelCard className="bg-sidebar-item-hover-bg/10 ring-1 ring-modal-surface-border/30">
                     <div className="space-y-2.5 px-3.5 py-3">
-                      <div className="space-y-1">
-                        <label className="block font-sans text-[0.82rem] font-medium tracking-[0.02em] text-modal-surface-foreground/92">
-                          website url
-                        </label>
+                      <FormField
+                        label="website url"
+                        error={importState.localError}
+                        labelClassName="text-modal-surface-foreground/92"
+                      >
                         <input
                           ref={websiteUrlInputRef}
                           type="text"
@@ -294,89 +263,30 @@ export function SettingsModal({
                             'focus:outline-none focus:ring-0 focus-visible:ring-0 focus:border-modal-surface-border/80',
                           )}
                         />
-                        </div>
-                      {importState.localError ? (
-                        <p className="font-sans text-[0.75rem] text-menu-item-destructive-text">
-                          {importState.localError}
-                        </p>
-                      ) : null}
+                      </FormField>
 
                       <div className="space-y-2">
                         <p className="font-sans text-[0.82rem] font-medium tracking-[0.02em] text-modal-surface-foreground/92">
                           import filters
                         </p>
                         <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2">
-                          <button
-                            type="button"
-                            aria-pressed={importState.includeFooter}
+                          <FilterToggleCard
+                            title="include footer"
+                            subtitle="keep footer notes and links"
+                            selected={importState.includeFooter}
                             onClick={() => setImportField('includeFooter', !importState.includeFooter)}
-                            className={cn(
-                              'relative rounded-xl border px-3.5 py-2.5 text-left transition-colors',
-                              importState.includeFooter
-                                ? 'border-modal-surface-border/65 bg-import-filter text-foreground'
-                                : 'border-modal-surface-border/55 bg-sidebar-container-bg/80 text-modal-surface-foreground/80 hover:border-modal-surface-border/70 hover:bg-sidebar-container-bg/60',
-                            )}
-                          >
-                            <span className="block font-sans-serif text-[0.79rem] leading-tight">include footer</span>
-                            <span className="block pt-1 font-sans text-[0.69rem] leading-tight text-modal-surface-foreground/58">
-                              keep footer notes and links
-                            </span>
-                            <span
-                              className={cn(
-                                'absolute top-2.5 right-2.5 inline-flex h-4.5 w-8 items-center rounded-full p-0.5 overflow-hidden transition-colors',
-                                importState.includeFooter
-                                  ? 'bg-highlight-vivid ring-1 ring-inset ring-highlight-vivid/50 shadow-none'
-                                  : 'bg-(--import-toggle-off-track) ring-1 ring-inset ring-(--import-toggle-off-ring)',
-                              )}
-                            >
-                              <span
-                                className={cn(
-                                  'size-3 rounded-full transition-transform',
-                                  importState.includeFooter
-                                    ? 'translate-x-3.75 bg-(--import-toggle-knob-on)'
-                                    : 'translate-x-px bg-(--import-toggle-knob-off)',
-                                )}
-                              />
-                            </span>
-                          </button>
+                          />
 
-                          <button
-                            type="button"
-                            aria-pressed={importState.includeImages}
+                          <FilterToggleCard
+                            title="include images"
+                            subtitle="keep inline media from article body"
+                            selected={importState.includeImages}
                             onClick={() => setImportField('includeImages', !importState.includeImages)}
-                            className={cn(
-                              'relative rounded-xl border px-3.5 py-2.5 text-left transition-colors',
-                              importState.includeImages
-                                ? 'border-modal-surface-border/65 bg-import-filter text-foreground'
-                                : 'border-modal-surface-border/55 bg-sidebar-container-bg/80 text-modal-surface-foreground/80 hover:border-modal-surface-border/70 hover:bg-sidebar-container-bg/60',
-                            )}
-                          >
-                            <span className="block font-sans-serif text-[0.79rem] leading-tight">include images</span>
-                            <span className="block pt-1 font-sans text-[0.69rem] leading-tight text-modal-surface-foreground/58">
-                              keep inline media from article body
-                            </span>
-                            <span
-                              className={cn(
-                                'absolute top-2.5 right-2.5 inline-flex h-4.5 w-8 items-center rounded-full p-0.5 overflow-hidden transition-colors',
-                                importState.includeImages
-                                  ? 'bg-highlight-vivid ring-1 ring-inset ring-highlight-vivid/50 shadow-none'
-                                  : 'bg-(--import-toggle-off-track) ring-1 ring-inset ring-(--import-toggle-off-ring)',
-                              )}
-                            >
-                              <span
-                                className={cn(
-                                  'size-3 rounded-full transition-transform',
-                                  importState.includeImages
-                                    ? 'translate-x-3.75 bg-(--import-toggle-knob-on)'
-                                    : 'translate-x-px bg-(--import-toggle-knob-off)',
-                                )}
-                              />
-                            </span>
-                          </button>
+                          />
                         </div>
                       </div>
                     </div>
-                  </div>
+                  </PanelCard>
                 </div>
 
                 {importError ? (
@@ -396,51 +306,22 @@ export function SettingsModal({
                 </div>
 
                 <div className="space-y-3">
-                  <div className="w-full overflow-hidden rounded-xl border border-modal-surface-border/55 bg-sidebar-container-bg">
+                  <PanelCard>
                     {appearanceOptions.map((option, index) => {
                       const selected = theme === option.value;
 
                       return (
-                        <button
+                        <ChoiceRow
                           key={option.value}
-                          type="button"
                           onClick={() => setTheme(option.value)}
-                          className={cn(
-                            'group relative flex w-full items-start justify-between gap-3 overflow-hidden text-left',
-                            'px-3.5 py-2.5 transition-colors duration-100',
-                            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-button-ring',
-                            selected
-                              ? 'bg-sidebar-item-hover-bg/55 text-modal-surface-foreground'
-                              : 'bg-transparent text-modal-surface-foreground/80 hover:bg-sidebar-item-hover-bg/30',
-                          )}
-                        >
-                          <div className="relative z-10 min-w-0 space-y-0.5">
-                            <p className="font-sans-serif text-[0.84rem] font-medium leading-tight">{option.title}</p>
-                            <p className="font-sans text-[0.72rem] leading-snug text-modal-surface-foreground/58">
-                              {option.subtitle}
-                            </p>
-                          </div>
-                          <span
-                            className={cn(
-                              'relative z-10 mt-0.5 inline-flex size-5 shrink-0 items-center justify-center rounded-full border',
-                              selected
-                                ? 'border-2 border-sidebar-border/70 bg-sidebar-item-hover-bg/60 text-modal-surface-foreground/85'
-                                : 'border-modal-surface-border/55 text-transparent',
-                            )}
-                          >
-                            {selected ? <span className="size-2 rounded-full bg-modal-surface-foreground/68" /> : null}
-                          </span>
-                          <Ripple
-                            duration={1200}
-                            color="color-mix(in srgb, var(--sidebar-item-hover-bg) 85%, transparent)"
-                          />
-                          {index < appearanceOptions.length - 1 ? (
-                            <span className="pointer-events-none absolute right-3 left-3 bottom-0 h-px bg-modal-surface-border/45" />
-                          ) : null}
-                        </button>
+                          selected={selected}
+                          title={option.title}
+                          subtitle={option.subtitle}
+                          showDivider={index < appearanceOptions.length - 1}
+                        />
                       );
                     })}
-                  </div>
+                  </PanelCard>
                 </div>
 
               </div>
@@ -448,81 +329,25 @@ export function SettingsModal({
           </div>
 
           {activeSection === 'export' ? (
-            <footer className="flex items-center justify-between gap-4 border-t border-modal-surface-border/70 px-5 py-3">
-              <p className="font-sans text-xs italic text-modal-surface-foreground/60">
-                {printableCount ? `${printableCount} file${printableCount === 1 ? '' : 's'} ready` : 'pick what to export'}
-              </p>
-              <Button
-                onClick={onExport}
-                variant="outline"
-                size="lg"
-                disabled={isExporting || printableCount === 0 || (!hasActiveFile && printScope !== 'space')}
-                className={cn(
-                  'cursor-pointer relative overflow-hidden justify-start gap-2 px-3 py-2 text-sm font-semibold',
-                  'text-sidebar-foreground bg-sidebar-item-hover-bg/60 border-2 border-sidebar-border/70 hover:bg-sidebar-item-hover-bg/80',
-                  'transition-all duration-200 w-fit',
-                  'disabled:cursor-not-allowed disabled:opacity-50',
-                )}
-              >
-                <span className="relative z-10 inline-flex items-center gap-2 font-sans-serif">
-                  {isExporting ? 'exporting...' : 'export pdf'}
-                </span>
-                <Ripple
-                  duration={1200}
-                  color="color-mix(in srgb, var(--sidebar-item-hover-bg) 82%, transparent)"
-                />
-              </Button>
-            </footer>
+            <FooterActionBar
+              hint={printableCount ? `${printableCount} file${printableCount === 1 ? '' : 's'} ready` : 'pick what to export'}
+              primaryLabel={isExporting ? 'exporting...' : 'export pdf'}
+              onPrimaryClick={onExport}
+              primaryDisabled={isExporting || printableCount === 0 || (!hasActiveFile && printScope !== 'space')}
+            />
           ) : activeSection === 'import' ? (
-            <footer className="flex items-center justify-between gap-4 border-t border-modal-surface-border/70 px-5 py-3">
-              <p className="font-sans text-xs italic text-modal-surface-foreground/60">
-                this creates a new file from extracted content
-              </p>
-              <Button
-                onClick={handleImportWebsite}
-                variant="outline"
-                size="lg"
-                disabled={!isWebsiteUrlValid || isImporting}
-                className={cn(
-                  'cursor-pointer relative overflow-hidden justify-start gap-2 px-3 py-2 text-sm font-semibold',
-                  'text-sidebar-foreground bg-sidebar-item-hover-bg/60 border-2 border-sidebar-border/70 hover:bg-sidebar-item-hover-bg/80',
-                  'transition-all duration-200 w-fit',
-                  'disabled:cursor-not-allowed disabled:opacity-50',
-                )}
-              >
-                <span className="relative z-10 inline-flex items-center gap-2 font-sans-serif">
-                  {isImporting ? 'importing...' : 'import from website'}
-                </span>
-                <Ripple
-                  duration={1200}
-                  color="color-mix(in srgb, var(--sidebar-item-hover-bg) 82%, transparent)"
-                />
-              </Button>
-            </footer>
+            <FooterActionBar
+              hint="this creates a new file from extracted content"
+              primaryLabel={isImporting ? 'importing...' : 'import from website'}
+              onPrimaryClick={handleImportWebsite}
+              primaryDisabled={!isWebsiteUrlValid || isImporting}
+            />
           ) : activeSection === 'customizability' ? null : (
-            <footer className="flex items-center justify-between gap-4 border-t border-modal-surface-border/70 px-5 py-3">
-              <p className="font-sans text-xs italic text-modal-surface-foreground/60">
-                we will remember your preference
-              </p>
-              <Button
-                onClick={() => onOpenChange(false)}
-                variant="outline"
-                size="lg"
-                className={cn(
-                  'cursor-pointer relative overflow-hidden justify-start gap-2 px-3 py-2 text-sm font-semibold',
-                  'text-sidebar-foreground bg-sidebar-item-hover-bg/60 border-2 border-sidebar-border/70 hover:bg-sidebar-item-hover-bg/80',
-                  'transition-all duration-200 w-fit',
-                )}
-              >
-                <span className="relative z-10 inline-flex items-center gap-2 font-sans-serif">
-                  done
-                </span>
-                <Ripple
-                  duration={1200}
-                  color="color-mix(in srgb, var(--sidebar-item-hover-bg) 82%, transparent)"
-                />
-              </Button>
-            </footer>
+            <FooterActionBar
+              hint="we will remember your preference"
+              primaryLabel="done"
+              onPrimaryClick={() => onOpenChange(false)}
+            />
           )}
         </section>
       </div>

@@ -1,12 +1,12 @@
 import React, { useEffect, useCallback, useMemo } from 'react';
 import Sidebar from "../components/sidebar/sidebar";
 import { Toolbar } from "../components/toolbar/toolbar";
+import { dispatchAppEvent, APP_EVENTS } from '@/lib/app-events';
 import { useLayout } from '@/contexts/LayoutContext';
 import { useParams } from '@tanstack/react-router';
-import { SidebarProvider, SidebarInset, useSidebar } from '@/components/ui/sidebar';
+import { SidebarInset, useSidebar } from '@/components/ui/sidebar';
 import { useGlobalSidebarShortcuts } from '@/hooks/use-global-sidebar-shortcuts';
 import { SearchBar } from '@/components/search/search-bar';
-import { useFileSystem } from '@/contexts/FileSystemContext';
 import { useEditorContext } from '@/contexts/EditorContext';
 import { WorkspaceSkeleton } from '@/components/skeletons/workspace-skeleton';
 import {
@@ -16,8 +16,28 @@ import {
 import { useAppSelector } from '@/store/hooks';
 import { selectActiveSpaceId } from '@/store/selectors';
 import { resolveCustomizationProperties } from '@/services/customizationResolver';
+import type { CustomizationPropertyKey } from '@/types/customization';
 
 const APP_SCOPE_ID = 'app-default';
+
+const FONT_FAMILY_MAP: Array<[CustomizationPropertyKey, string]> = [
+  ['editor.fontFamily', '--custom-editor-font'],
+  ['title.fontFamily', '--custom-title-font'],
+  ['body.fontFamily', '--font-sans'],
+  ['code.fontFamily', '--custom-code-font'],
+  ['h1.fontFamily', '--custom-h1-font'],
+  ['h2.fontFamily', '--custom-h2-font'],
+  ['h3.fontFamily', '--custom-h3-font'],
+];
+
+const FONT_SIZE_MAP: Array<[CustomizationPropertyKey, string[]]> = [
+  ['editor.fontSize', ['--font-size-editor-base', '--font-size-note']],
+  ['title.fontSize', ['--font-size-document-title']],
+  ['code.fontSize', ['--font-size-code']],
+  ['h1.fontSize', ['--font-size-heading-1']],
+  ['h2.fontSize', ['--font-size-heading-2']],
+  ['h3.fontSize', ['--font-size-heading-3']],
+];
 
 function LoadingScreen() {
   return <WorkspaceSkeleton />;
@@ -46,70 +66,20 @@ function EditorLayoutContent({children}: {children?: React.ReactNode}) {
   const customizationStyles = useMemo(() => {
     const styles: Record<string, string> = {};
 
-    const editorFont = resolvedCustomization['editor.fontFamily']?.value;
-    if (typeof editorFont === 'string') {
-      styles['--custom-editor-font'] = editorFont;
+    for (const [prop, cssVar] of FONT_FAMILY_MAP) {
+      const value = resolvedCustomization[prop]?.value;
+      if (typeof value === 'string') {
+        styles[cssVar] = value;
+      }
     }
 
-    const titleFont = resolvedCustomization['title.fontFamily']?.value;
-    if (typeof titleFont === 'string') {
-      styles['--custom-title-font'] = titleFont;
-    }
-
-    const bodyFont = resolvedCustomization['body.fontFamily']?.value;
-    if (typeof bodyFont === 'string') {
-      styles['--font-sans'] = bodyFont;
-    }
-
-    const codeFont = resolvedCustomization['code.fontFamily']?.value;
-    if (typeof codeFont === 'string') {
-      styles['--custom-code-font'] = codeFont;
-    }
-
-    const h1Font = resolvedCustomization['h1.fontFamily']?.value;
-    if (typeof h1Font === 'string') {
-      styles['--custom-h1-font'] = h1Font;
-    }
-
-    const h2Font = resolvedCustomization['h2.fontFamily']?.value;
-    if (typeof h2Font === 'string') {
-      styles['--custom-h2-font'] = h2Font;
-    }
-
-    const h3Font = resolvedCustomization['h3.fontFamily']?.value;
-    if (typeof h3Font === 'string') {
-      styles['--custom-h3-font'] = h3Font;
-    }
-
-    const editorSize = resolvedCustomization['editor.fontSize']?.value;
-    if (typeof editorSize === 'number') {
-      styles['--font-size-editor-base'] = `${editorSize}px`;
-      styles['--font-size-note'] = `${editorSize}px`;
-    }
-
-    const titleSize = resolvedCustomization['title.fontSize']?.value;
-    if (typeof titleSize === 'number') {
-      styles['--font-size-document-title'] = `${titleSize}px`;
-    }
-
-    const codeSize = resolvedCustomization['code.fontSize']?.value;
-    if (typeof codeSize === 'number') {
-      styles['--font-size-code'] = `${codeSize}px`;
-    }
-
-    const h1Size = resolvedCustomization['h1.fontSize']?.value;
-    if (typeof h1Size === 'number') {
-      styles['--font-size-heading-1'] = `${h1Size}px`;
-    }
-
-    const h2Size = resolvedCustomization['h2.fontSize']?.value;
-    if (typeof h2Size === 'number') {
-      styles['--font-size-heading-2'] = `${h2Size}px`;
-    }
-
-    const h3Size = resolvedCustomization['h3.fontSize']?.value;
-    if (typeof h3Size === 'number') {
-      styles['--font-size-heading-3'] = `${h3Size}px`;
+    for (const [prop, cssVars] of FONT_SIZE_MAP) {
+      const value = resolvedCustomization[prop]?.value;
+      if (typeof value === 'number') {
+        for (const cssVar of cssVars) {
+          styles[cssVar] = `${value}px`;
+        }
+      }
     }
 
     return styles;
@@ -121,9 +91,7 @@ function EditorLayoutContent({children}: {children?: React.ReactNode}) {
     if (isFindShortcut) {
       e.preventDefault();
       const cursorPos = pageEditorRef.current?.state.selection.from ?? null;
-      document.dispatchEvent(new CustomEvent('openFindDialogFromEditor', {
-        detail: { cursorPos },
-      }));
+      dispatchAppEvent(APP_EVENTS.OPEN_FIND_DIALOG, { cursorPos });
       return;
     }
   }, []);
@@ -134,7 +102,7 @@ function EditorLayoutContent({children}: {children?: React.ReactNode}) {
   }, [handleKeydown]);
 
   const handleEditorAreaMouseDown = useCallback(() => {
-    document.dispatchEvent(new CustomEvent('editor:activate-file'));
+    dispatchAppEvent(APP_EVENTS.EDITOR_ACTIVATE_FILE);
   }, []);
 
   return (
@@ -182,19 +150,12 @@ function EditorLayoutContent({children}: {children?: React.ReactNode}) {
 
 function EditorLayout({children}: {children?: React.ReactNode}) {
   const { isLoading: isLayoutLoading } = useLayout();
-  const { isLoading } = useFileSystem();
 
-  if (isLoading || isLayoutLoading) {
+  if (isLayoutLoading) {
     return <LoadingScreen />;
   }
 
-  return (
-    <SidebarProvider defaultOpen={true}>
-      <EditorLayoutContent>
-        {children}
-      </EditorLayoutContent>
-    </SidebarProvider>
-  );
+  return <EditorLayoutContent>{children}</EditorLayoutContent>;
 }
 
 export default EditorLayout;

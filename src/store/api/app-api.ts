@@ -284,7 +284,30 @@ export const appApi = createApi({
           return { error: toError(error) };
         }
       },
-      invalidatesTags: [{ type: 'Workspace', id: 'ROOT' }],
+      async onQueryStarted({ id, name }, { dispatch, queryFulfilled }) {
+        const normalizedName = name.trim();
+        const patchResult = dispatch(
+          appApi.util.updateQueryData('getWorkspace', undefined, (draft) => {
+            draft.spaces.forEach((space) => {
+              if (updateNodeInTree(space.fileTree, id, (node) => {
+                node.name = normalizedName;
+              })) {
+                space.pinnedNodes.forEach((node) => {
+                  if (node.id === id) {
+                    node.name = normalizedName;
+                  }
+                });
+              }
+            });
+          }),
+        );
+
+        try {
+          await queryFulfilled;
+        } catch {
+          patchResult.undo();
+        }
+      },
     }),
 
     toggleNodeOpen: builder.mutation<void, { id: string; isOpen: boolean }>({
@@ -360,7 +383,26 @@ export const appApi = createApi({
           return { error: toError(error) };
         }
       },
-      invalidatesTags: [{ type: 'Layout', id: 'ROOT' }],
+      async onQueryStarted(updates, { dispatch, queryFulfilled }) {
+        const patchResult = dispatch(
+          appApi.util.updateQueryData('getLayout', undefined, (draft) => {
+            Object.assign(draft, updates);
+          }),
+        );
+
+        try {
+          const { data } = await queryFulfilled;
+          if (data) {
+            dispatch(
+              appApi.util.updateQueryData('getLayout', undefined, (draft) => {
+                Object.assign(draft, data);
+              }),
+            );
+          }
+        } catch {
+          patchResult.undo();
+        }
+      },
     }),
 
     getKeybindings: builder.query<Keybindings, void>({

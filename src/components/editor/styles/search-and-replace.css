@@ -1,32 +1,16 @@
 /* Search and Replace Styles */
 
-.search-result {
-  color: var(--selection-text);
-  background-color: color-mix(in srgb, var(--highlight-vivid) 30%, transparent) !important;
-  border-radius: 4px;
-  transition: background-color 0.2s ease;
-}
-
+.search-result,
 .search-result-first {
   color: var(--selection-text);
-  background-color: color-mix(in srgb, var(--highlight-vivid) 30%, transparent) !important;
+  background-color: var(--search-selection-bg) !important;
   border-radius: 4px;
   transition: background-color 0.2s ease;
 }
 
 .search-result-current {
   color: var(--selection-text);
-  background-color: color-mix(in srgb, var(--highlight-vivid) 70%, transparent) !important;
-  border: 1px solid color-mix(in srgb, var(--highlight-vivid) 45%, transparent);
+  background-color: var(--search-active-bg) !important;
+  border: 1px solid var(--search-active-border);
   border-radius: 4px;
-  animation: pulse-highlight 1s ease-in-out;
-}
-
-@keyframes pulse-highlight {
-  0%, 100% {
-    background: color-mix(in srgb, var(--highlight-vivid) 70%, transparent);
-  }
-  50% {
-    background: color-mix(in srgb, var(--highlight-vivid) 85%, transparent);
-  }
 }

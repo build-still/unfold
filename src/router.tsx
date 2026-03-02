@@ -1,68 +1,72 @@
-import { useEffect } from 'react';
 import {
   createRouter,
   createRoute,
-  createRootRoute,
+  createRootRouteWithContext,
   Outlet,
-  useNavigate,
-  useParams,
+  redirect,
 } from '@tanstack/react-router';
-import FullPageEditor from './components/editor/full-page-editor';
-import { EditorSkeleton } from './components/editor/editor-skeleton';
-import EditorLayout from './layout/editor-layout';
-import { IndexPage } from './components/index/index-page';
-import { useFileSystem } from './contexts/FileSystemContext';
-import { findFirstFileId, findNodeById } from './lib/file-tree';
+import { EditorSkeleton } from '@/components/editor/editor-skeleton';
+import FullPageEditor from '@/components/editor/full-page-editor';
+import { IndexPage } from '@/components/index/index-page';
+import { WorkspaceSkeleton } from '@/components/skeletons/workspace-skeleton';
+import { findFirstFileId, findNodeById } from '@/lib/file-tree';
+import { resolveInitialSpaceId } from '@/lib/space-selection';
+import EditorLayout from '@/layout/editor-layout';
+import type { AppStore } from '@/store';
+import { appApi, type WorkspaceSnapshot, type WorkspaceSpace } from '@/store/api/app-api';
+import { selectActiveSpaceId, selectPendingFileId } from '@/store/selectors';
+import { setActiveSpaceId } from '@/store/slices/ui-slice';
+import { getLastOpenedFile, setLastOpenedFile } from '@/utils/last-opened';
 
-function LegacyFileRouteRedirect() {
-  const { fileId } = useParams({ from: '/files/$fileId' });
-  const navigate = useNavigate();
-  const { spaces, activeSpaceId, isLoading } = useFileSystem();
-
-  useEffect(() => {
-    if (isLoading || !fileId) {
-      return;
-    }
-
-    const ownerSpace = spaces.find((space) => findNodeById(space.fileTree, fileId));
-
-    if (ownerSpace) {
-      navigate({
-        to: '/spaces/$spaceId/files/$fileId',
-        params: { spaceId: ownerSpace.id, fileId },
-        replace: true,
-      });
-      return;
-    }
-
-    const fallbackSpaceId = activeSpaceId || spaces[0]?.id;
-    if (!fallbackSpaceId) {
-      navigate({ to: '/', replace: true });
-      return;
-    }
-
-    const fallbackSpace = spaces.find((space) => space.id === fallbackSpaceId);
-    const fallbackFileId = findFirstFileId(fallbackSpace?.fileTree ?? []);
-    if (fallbackFileId) {
-      navigate({
-        to: '/spaces/$spaceId/files/$fileId',
-        params: { spaceId: fallbackSpaceId, fileId: fallbackFileId },
-        replace: true,
-      });
-      return;
-    }
-
-    navigate({
-      to: '/spaces/$spaceId',
-      params: { spaceId: fallbackSpaceId },
-      replace: true,
-    });
-  }, [activeSpaceId, fileId, isLoading, navigate, spaces]);
-
-  return <EditorSkeleton />;
+interface RouterContext {
+  store: AppStore;
 }
 
-const rootRoute = createRootRoute({
+let workspaceSubscription:
+  | {
+    unwrap: () => Promise<WorkspaceSnapshot>;
+  }
+  | null = null;
+
+function ensureWorkspaceSubscription(store: AppStore) {
+  if (workspaceSubscription) {
+    return workspaceSubscription;
+  }
+
+  workspaceSubscription = store.dispatch(appApi.endpoints.getWorkspace.initiate());
+  return workspaceSubscription;
+}
+
+async function ensureWorkspaceSelection(store: AppStore): Promise<{
+  workspace: WorkspaceSnapshot;
+  resolvedActiveSpaceId: string;
+}> {
+  const workspace = await ensureWorkspaceSubscription(store).unwrap();
+  const currentActiveSpaceId = selectActiveSpaceId(store.getState());
+  const resolvedActiveSpaceId = resolveInitialSpaceId(workspace.spaces, currentActiveSpaceId);
+
+  if (resolvedActiveSpaceId !== currentActiveSpaceId) {
+    store.dispatch(setActiveSpaceId(resolvedActiveSpaceId));
+  }
+
+  return { workspace, resolvedActiveSpaceId };
+}
+
+function resolvePreferredFileId(space: WorkspaceSpace): string | null {
+  const lastOpenedFileId = getLastOpenedFile(space.id);
+
+  if (lastOpenedFileId && findNodeById(space.fileTree, lastOpenedFileId)) {
+    return lastOpenedFileId;
+  }
+
+  return findFirstFileId(space.fileTree);
+}
+
+const rootRoute = createRootRouteWithContext<RouterContext>()({
+  loader: async ({ context }) => {
+    await ensureWorkspaceSelection(context.store);
+  },
+  pendingComponent: WorkspaceSkeleton,
   component: () => (
     <EditorLayout>
       <Outlet />
@@ -74,31 +78,137 @@ const rootRoute = createRootRoute({
 const indexRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/',
+  loader: async ({ context }) => {
+    const { workspace, resolvedActiveSpaceId } = await ensureWorkspaceSelection(context.store);
+
+    if (!resolvedActiveSpaceId) {
+      return;
+    }
+
+    const targetSpace = workspace.spaces.find((space) => space.id === resolvedActiveSpaceId);
+    if (!targetSpace) {
+      return;
+    }
+
+    const targetFileId = resolvePreferredFileId(targetSpace);
+    if (targetFileId) {
+      throw redirect({
+        to: '/spaces/$spaceId/files/$fileId',
+        params: { spaceId: targetSpace.id, fileId: targetFileId },
+        replace: true,
+      });
+    }
+
+    throw redirect({
+      to: '/spaces/$spaceId',
+      params: { spaceId: targetSpace.id },
+      replace: true,
+    });
+  },
   component: IndexPage,
 });
 
 const spaceIndexRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: 'spaces/$spaceId',
+  loader: async ({ context, params }) => {
+    const { workspace, resolvedActiveSpaceId } = await ensureWorkspaceSelection(context.store);
+    const requestedSpace = workspace.spaces.find((space) => space.id === params.spaceId);
+
+    if (!requestedSpace) {
+      const fallbackSpaceId = resolvedActiveSpaceId || workspace.spaces[0]?.id;
+      if (!fallbackSpaceId) {
+        throw redirect({ to: '/', replace: true });
+      }
+
+      throw redirect({
+        to: '/spaces/$spaceId',
+        params: { spaceId: fallbackSpaceId },
+        replace: true,
+      });
+    }
+
+    const currentActiveSpaceId = selectActiveSpaceId(context.store.getState());
+    if (currentActiveSpaceId !== requestedSpace.id) {
+      context.store.dispatch(setActiveSpaceId(requestedSpace.id));
+    }
+
+    const targetFileId = resolvePreferredFileId(requestedSpace);
+    if (!targetFileId) {
+      return;
+    }
+
+    throw redirect({
+      to: '/spaces/$spaceId/files/$fileId',
+      params: { spaceId: requestedSpace.id, fileId: targetFileId },
+      replace: true,
+    });
+  },
+  pendingComponent: WorkspaceSkeleton,
   component: IndexPage,
 });
 
 const fileRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: 'spaces/$spaceId/files/$fileId',
+  loader: async ({ context, params }) => {
+    const { workspace, resolvedActiveSpaceId } = await ensureWorkspaceSelection(context.store);
+    const requestedSpace = workspace.spaces.find((space) => space.id === params.spaceId);
+
+    if (!requestedSpace) {
+      const fallbackSpaceId = resolvedActiveSpaceId || workspace.spaces[0]?.id;
+      if (!fallbackSpaceId) {
+        throw redirect({ to: '/', replace: true });
+      }
+
+      throw redirect({
+        to: '/spaces/$spaceId',
+        params: { spaceId: fallbackSpaceId },
+        replace: true,
+      });
+    }
+
+    const currentActiveSpaceId = selectActiveSpaceId(context.store.getState());
+    if (currentActiveSpaceId !== requestedSpace.id) {
+      context.store.dispatch(setActiveSpaceId(requestedSpace.id));
+    }
+
+    const pendingFileId = selectPendingFileId(context.store.getState());
+    if (pendingFileId && pendingFileId === params.fileId) {
+      return;
+    }
+
+    if (findNodeById(requestedSpace.fileTree, params.fileId)) {
+      setLastOpenedFile(requestedSpace.id, params.fileId);
+      return;
+    }
+
+    const targetFileId = resolvePreferredFileId(requestedSpace);
+    if (targetFileId) {
+      throw redirect({
+        to: '/spaces/$spaceId/files/$fileId',
+        params: { spaceId: requestedSpace.id, fileId: targetFileId },
+        replace: true,
+      });
+    }
+
+    throw redirect({
+      to: '/spaces/$spaceId',
+      params: { spaceId: requestedSpace.id },
+      replace: true,
+    });
+  },
+  pendingComponent: EditorSkeleton,
   component: FullPageEditor,
 });
 
-const legacyFileRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: 'files/$fileId',
-  component: LegacyFileRouteRedirect,
-});
-
-const routeTree = rootRoute.addChildren([indexRoute, spaceIndexRoute, fileRoute, legacyFileRoute]);
+const routeTree = rootRoute.addChildren([indexRoute, spaceIndexRoute, fileRoute]);
 
 export const router = createRouter({
   routeTree,
+  context: {
+    store: undefined!,
+  },
   defaultPreload: 'intent',
 });
 

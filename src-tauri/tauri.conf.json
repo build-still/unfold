@@ -77,27 +77,42 @@
       "use": "brownfield"
     }
   },
-  "windows": [
-    {
-      "maximizable": true,
-      "minHeight": 800,
-      "minWidth": 200,
-      "minimizable": true,
-      "decorations": true,
-      "label": "main",
-      "maximized": true,
-      "dragDropEnabled": false,
-      "titleBarStyle": "Overlay",
-      "hiddenTitle": true,
-      "title": "Unfold",
-      "trafficLightPosition":{
-        "x": 20,
-        "y": 23
+    "windows": [
+      {
+        "maximizable": true,
+        "minHeight": 800,
+        "minWidth": 200,
+        "minimizable": true,
+        "decorations": true,
+        "label": "main",
+        "maximized": true,
+        "dragDropEnabled": false,
+        "titleBarStyle": "Overlay",
+        "hiddenTitle": true,
+        "title": "Unfold",
+        "trafficLightPosition":{
+          "x": 20,
+          "y": 23
+        },
+        "shadow": false,
+        "backgroundColor": "#0D0D0C",
+        "visible": false
       },
-      "shadow": false,
-      "backgroundColor": "#0D0D0C"
-    }
-  ],
+      {
+        "label": "splashscreen",
+        "url": "splashscreen.html",
+        "title": "Unfold",
+        "maximizable": false,
+        "minimizable": false,
+        "resizable": false,
+        "decorations": false,
+        "dragDropEnabled": false,
+        "shadow": false,
+        "backgroundColor": "#0D0D0C",
+        "maximized": true,
+        "focus": true
+      }
+    ],
   "withGlobalTauri": false
   }
 }

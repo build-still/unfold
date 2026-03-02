@@ -1,6 +1,6 @@
 import React from 'react';
 
-import { AnimatedIcon } from '@/components/ui/animated-icon';
+import { IconActionButton } from '@/components/atoms/icon-action-button';
 import { cn } from '@/lib/tiptap-utils';
 
 interface SidebarActionButtonProps {
@@ -17,15 +17,12 @@ export function SidebarActionButton({
   children,
 }: SidebarActionButtonProps) {
   return (
-    <button
+    <IconActionButton
       onClick={onClick}
       aria-label={ariaLabel}
-      className={cn(
-        'sidebar-icon-button rounded-md hover:bg-sidebar-icon-hover-bg/75 transition-colors duration-150 size-5 flex items-center justify-center',
-        className,
-      )}
+      className={cn(className)}
     >
-      <AnimatedIcon className="w-full h-full flex items-center justify-center">{children}</AnimatedIcon>
-    </button>
+      {children}
+    </IconActionButton>
   );
 }

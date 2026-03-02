@@ -10,9 +10,8 @@ import {
 import { animate, type AnimationPlaybackControls } from "motion";
 import type {
   CommandListProps,
-  SlashMenuItemType,
 } from "@/components/editor/components/slash-menu/types";
-import { cn } from "@/lib/tiptap-utils";
+import { CommandListItem } from "./command-list-item";
 
 type CommandListRef = {
   onKeyDown: (props: { event: KeyboardEvent }) => boolean;
@@ -174,42 +173,19 @@ const CommandList = forwardRef<CommandListRef, CommandListProps>(
                 </div>
               ) : null}
               <div className="flex flex-col gap-0.5">
-                {visibleItems.map((item: SlashMenuItemType) => {
+                {visibleItems.map((item) => {
                   runningIndex += 1;
                   const isSelected = runningIndex === selectedIndex;
-                  const Icon = item.icon;
 
                   return (
-                    <button
-                      type="button"
-                      data-item-index={runningIndex}
+                    <CommandListItem
                       key={`${category}-${item.title}-${runningIndex}`}
-                      onClick={() => selectItem(runningIndex)}
-                      className={cn(
-                        "group flex w-full items-start gap-2 rounded-xl border border-transparent px-2.5 py-2 text-left transition-colors duration-150",
-                        "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-sidebar-ring/60",
-                        isSelected
-                          ? "border-border-elevated bg-sidebar-subitem-selected-bg text-foreground"
-                          : "text-sidebar-foreground/90 hover:bg-sidebar-item-hover-bg/75 hover:text-foreground",
-                      )}
-                    >
-                      <span
-                        className={cn(
-                          "mt-0.5 inline-flex h-5 w-5 items-center justify-center",
-                          isSelected ? "text-sidebar-foreground" : "text-unselected-icon",
-                        )}
-                      >
-                        <Icon size={16} />
-                      </span>
-                      <span className="min-w-0">
-                        <span className="block truncate font-sans-serif text-sm font-medium tracking-tight lowercase">
-                          {item.title}
-                        </span>
-                        <span className="block truncate font-sans text-xs text-foreground-muted-secondary lowercase">
-                          {item.description}
-                        </span>
-                      </span>
-                    </button>
+                      category={category}
+                      index={runningIndex}
+                      item={item}
+                      isSelected={isSelected}
+                      onSelect={selectItem}
+                    />
                   );
                 })}
               </div>

@@ -1,28 +1,14 @@
-import React, { Dispatch, FC, SetStateAction } from "react";
+import { Dispatch, FC, SetStateAction } from "react";
 import type { Editor } from "@tiptap/react";
 import { useEditorState } from "@tiptap/react";
-import { AlignCenter, AlignJustify, AlignLeft, AlignRight, CheckIcon, ChevronDown } from "lucide-react";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Button } from "@/components/ui/button";
-import { Tooltip, AppTooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { AlignCenter, AlignJustify, AlignLeft, AlignRight } from "lucide-react";
+import { EditorBubbleDropdown, type BubbleDropdownItem } from "@/components/molecules/editor-bubble-dropdown";
 
 interface TextAlignmentProps {
   editor: Editor | null;
   isOpen: boolean;
   setIsOpen: Dispatch<SetStateAction<boolean>>;
   container?: HTMLElement | null;
-}
-
-export interface BubbleMenuItem {
-  name: string;
-  icon: React.ElementType;
-  command: () => void;
-  isActive: () => boolean;
 }
 
 export const TextAlignmentSelector: FC<TextAlignmentProps> = ({
@@ -52,7 +38,7 @@ export const TextAlignmentSelector: FC<TextAlignmentProps> = ({
     return null;
   }
 
-  const items: BubbleMenuItem[] = [
+  const items: BubbleDropdownItem[] = [
     {
       name: "Align left",
       isActive: () => editorState?.isAlignLeft,
@@ -82,45 +68,14 @@ export const TextAlignmentSelector: FC<TextAlignmentProps> = ({
   const activeItem = items.filter((item) => item.isActive()).pop() ?? items[0];
 
   return (
-    <Tooltip>
-      <DropdownMenu open={isOpen} onOpenChange={setIsOpen} modal={false}>
-        <TooltipTrigger asChild>
-          <DropdownMenuTrigger asChild>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-8 gap-1 px-2 rounded-lg"
-              onMouseDown={(e) => e.preventDefault()}
-            >
-              <activeItem.icon className="h-4 w-4" />
-              <ChevronDown className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-        </TooltipTrigger>
-        <AppTooltipContent label="Align" />
-
-      <DropdownMenuContent 
-        align="start" 
-        className="w-40"
-        container={container}
-        onCloseAutoFocus={(e) => e.preventDefault()}
-      >
-        {items.map((item, index) => (
-          <DropdownMenuItem
-            key={index}
-            onMouseDown={(e) => {
-              e.preventDefault();
-              item.command();
-            }}
-            onSelect={(e) => e.preventDefault()}
-          >
-            <item.icon className="h-4 w-4" />
-            <span className="flex-1">{item.name}</span>
-            {activeItem.name === item.name && <CheckIcon className="h-4 w-4 text-primary" />}
-          </DropdownMenuItem>
-        ))}
-      </DropdownMenuContent>
-    </DropdownMenu>
-    </Tooltip>
+    <EditorBubbleDropdown
+      isOpen={isOpen}
+      setIsOpen={setIsOpen}
+      items={items}
+      tooltipLabel="Align"
+      trigger={<activeItem.icon className="h-4 w-4" />}
+      container={container}
+      contentClassName="w-40"
+    />
   );
 };

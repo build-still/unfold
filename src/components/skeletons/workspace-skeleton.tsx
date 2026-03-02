@@ -1,4 +1,10 @@
 import { EditorSkeleton } from "@/components/editor/editor-skeleton";
+import {
+  Sidebar as ShadcnSidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarHeader,
+} from "@/components/ui/sidebar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 
@@ -67,15 +73,40 @@ export function WorkspaceSkeleton() {
       aria-live="polite"
       aria-label="Loading workspace"
     >
-      <div className="flex h-[100svh] flex-col overflow-hidden">
+      <div className="flex h-svh flex-col overflow-hidden">
         <div className="h-10 shrink-0 bg-background" />
 
         <div className="flex min-h-0 flex-1 overflow-hidden">
-          <aside className="hidden shrink-0 p-2 md:block">
-            <div className="h-full w-[16rem] overflow-hidden rounded-[1.75rem] border border-sidebar-container-border/70 bg-sidebar">
-              <SidebarPanelSkeleton />
-            </div>
-          </aside>
+          <ShadcnSidebar
+            side="left"
+            variant="floating"
+            collapsible="offcanvas"
+            className="bg-transparent border-0 shadow-none top-10! bottom-2! h-auto! flex flex-col"
+          >
+            <SidebarHeader className="px-3 pt-2">
+              <div className="h-1" />
+            </SidebarHeader>
+            <SidebarContent className="px-3 overflow-y-auto">
+              <div className="mb-1">
+                <div className="px-2 py-1">
+                  <Skeleton className="h-3 w-12 rounded-sm" />
+                </div>
+                <SidebarTreeSkeleton rows={2} />
+              </div>
+              <div className="mt-2">
+                <div className="px-2 py-1">
+                  <Skeleton className="h-3 w-10 rounded-sm" />
+                </div>
+                <SidebarTreeSkeleton rows={10} className="pt-1.5" />
+              </div>
+            </SidebarContent>
+            <SidebarFooter className="border-t border-sidebar-container-border/80 px-3 py-2.5">
+              <div className="flex items-center gap-2">
+                <Skeleton className="h-8 flex-1 rounded-lg" />
+                <Skeleton className="size-5 rounded-md" />
+              </div>
+            </SidebarFooter>
+          </ShadcnSidebar>
 
           <main className="flex-1 overflow-hidden">
             <div className="mx-auto h-full w-full max-w-5xl px-6 pt-5 pb-8">

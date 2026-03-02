@@ -1,12 +1,13 @@
 import Database from "@tauri-apps/plugin-sql";
 import { appDataDir, join } from "@tauri-apps/api/path";
 import { Node } from "../types/sidebar";
+import { getDatabaseFileName } from "@/config/database";
 
 let db: Database | null = null;
 
 async function getDb(): Promise<Database> {
   if (!db) {
-    const dbName = import.meta.env.DEV ? "unfold-dev.db" : "unfold.db";
+    const dbName = getDatabaseFileName();
     const dataDir = await appDataDir();
     const dbPath = await join(dataDir, dbName);
     const dbUrl = `sqlite:${dbPath}`;

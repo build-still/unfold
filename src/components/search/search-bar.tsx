@@ -1,4 +1,3 @@
-import { X, Search as SearchIcon, ChevronUp, ChevronDown, CaseSensitive, Replace } from 'lucide-react';
 import React, { useEffect, useState, useRef } from 'react';
 import { useEditorState, type Editor } from '@tiptap/react';
 import type { Node } from '@tiptap/pm/model';
@@ -6,6 +5,9 @@ import { TextSelection } from '@tiptap/pm/state';
 import { KEYBOARD_SHORTCUTS, getShortcutDisplay } from '@/config/keyboard-shortcuts';
 import { cn } from '@/lib/utils';
 import { useEditorContext } from '@/contexts/EditorContext';
+import { SearchInputRow } from '@/features/search/components/search-input-row';
+import { SearchReplaceRow } from '@/features/search/components/search-replace-row';
+import { useAppEvent, APP_EVENTS, type AppEventPayloads } from '@/lib/app-events';
 
 /** Get the word at the given position in the document (for pre-filling find with word under cursor). */
 function getWordAtPosition(doc: Node, pos: number): string {
@@ -218,9 +220,8 @@ export const SearchBar = React.forwardRef<HTMLDivElement>(function SearchBar(
     focusActiveResult();
   }, [caseSensitive, editor]);
 
-  const handleOpenEvent = (event?: Event) => {
+  const handleOpenEvent = (detail: AppEventPayloads[typeof APP_EVENTS.OPEN_FIND_DIALOG]) => {
     const editorInHandler = pageEditorRef.current;
-    const detail = (event as CustomEvent<{ cursorPos?: number | null }>)?.detail;
     const cursorPos = detail?.cursorPos ?? editorInHandler?.state.selection.from ?? null;
     setIsOpen(true);
     shouldFocusClosestOnOpenRef.current = true;
@@ -252,17 +253,48 @@ export const SearchBar = React.forwardRef<HTMLDivElement>(function SearchBar(
   };
 
   // Listen for editor events
-  useEffect(() => {
-    document.addEventListener('openFindDialogFromEditor', handleOpenEvent);
-    document.addEventListener('closeFindDialogFromEditor', handleCloseEvent);
+  useAppEvent(APP_EVENTS.OPEN_FIND_DIALOG, handleOpenEvent);
+  useAppEvent(APP_EVENTS.CLOSE_FIND_DIALOG, handleCloseEvent);
 
-    return () => {
-      document.removeEventListener('openFindDialogFromEditor', handleOpenEvent);
-      document.removeEventListener('closeFindDialogFromEditor', handleCloseEvent);
-    };
-  }, [editor]);
+  const handleSearchInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      if (e.shiftKey) {
+        previous();
+      } else {
+        next();
+      }
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      closeDialog();
+    } else if (e.altKey && e.key.toLowerCase() === 'c') {
+      e.preventDefault();
+      toggleCaseSensitive();
+    } else if (e.altKey && e.key.toLowerCase() === 'r') {
+      e.preventDefault();
+      toggleReplace();
+    }
+  };
 
-
+  const handleReplaceInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      if (e.ctrlKey || e.metaKey) {
+        replaceAll();
+      } else {
+        replace();
+      }
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      setShowReplace(false);
+    } else if (e.altKey && e.key.toLowerCase() === 'c') {
+      e.preventDefault();
+      toggleCaseSensitive();
+    } else if (e.altKey && e.key.toLowerCase() === 'r') {
+      e.preventDefault();
+      toggleReplace();
+    }
+  };
 
   return (
     <div
@@ -281,197 +313,35 @@ export const SearchBar = React.forwardRef<HTMLDivElement>(function SearchBar(
           'min-w-[320px] w-[520px] max-w-[calc(100vw-2rem)]'
         )}
       >
-        {/* Search Row */}
-        <div className="flex items-center gap-2">
-          <div className="flex items-center gap-2 flex-1 min-w-0">
-            <SearchIcon size={14} className="text-muted-foreground/70" />
-            <input
-              ref={inputRef}
-              value={searchText}
-              placeholder="Find in page..."
-              onChange={searchInputEvent}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault();
-                  if (e.shiftKey) {
-                    previous();
-                  } else {
-                    next();
-                  }
-                } else if (e.key === 'Escape') {
-                  e.preventDefault();
-                  closeDialog();
-                } else if (e.altKey && e.key.toLowerCase() === 'c') {
-                  e.preventDefault();
-                  toggleCaseSensitive();
-                } else if (e.altKey && e.key.toLowerCase() === 'r') {
-                  e.preventDefault();
-                  toggleReplace();
-                }
-              }}
-              autoComplete="off"
-              autoCorrect="off"
-              autoCapitalize="none"
-              spellCheck={false}
-              className={cn(
-                'bg-transparent text-sm text-foreground placeholder:text-muted-foreground/60',
-                'focus:outline-none w-full'
-              )}
-            />
-          </div>
-
-          <div className="flex items-center gap-1.5 text-xs text-muted-foreground/70">
-            <span className="min-w-[46px] text-center tabular-nums font-medium text-foreground/85">
-              {searchText.trim() ? (
-                hasMatches ? `${activeDisplay}/${matchesCount}` : 'No results'
-              ) : ''}
-            </span>
-          </div>
-
-          <div className="flex items-center gap-1">
-            <button
-              type="button"
-              onClick={previous}
-              disabled={!hasMatches}
-              title="Previous match (Shift+Enter)"
-              className={cn(
-                'inline-flex items-center justify-center rounded-md size-7 transition border border-border/60',
-                'bg-muted/50 hover:bg-muted/80 disabled:opacity-30 disabled:cursor-not-allowed'
-              )}
-              aria-label="Previous match"
-            >
-              <ChevronUp size={14} />
-            </button>
-            
-            <button
-              type="button"
-              onClick={next}
-              disabled={!hasMatches}
-              title="Next match (Enter)"
-              className={cn(
-                'inline-flex items-center justify-center rounded-md size-7 transition border border-border/60',
-                'bg-muted/50 hover:bg-muted/80 disabled:opacity-30 disabled:cursor-not-allowed'
-              )}
-              aria-label="Next match"
-            >
-              <ChevronDown size={14} />
-            </button>
-
-            <button
-              type="button"
-              onClick={toggleCaseSensitive}
-              title="Match case (Alt+C)"
-              className={cn(
-                'inline-flex items-center justify-center rounded-md size-7 transition border border-border/60',
-                caseSensitive
-                  ? 'bg-highlight-vivid/20 border-highlight-vivid/50 text-highlight-vivid'
-                  : 'bg-muted/50 hover:bg-muted/80 text-muted-foreground/70'
-              )}
-              aria-label="Toggle case sensitive"
-            >
-              <CaseSensitive size={14} />
-            </button>
-
-            <button
-              type="button"
-              onClick={toggleReplace}
-              title="Replace (Alt+R)"
-              className={cn(
-                'inline-flex items-center justify-center rounded-md size-7 transition border border-border/60',
-                showReplace
-                  ? 'bg-highlight-vivid/20 border-highlight-vivid/50 text-highlight-vivid'
-                  : 'bg-muted/50 hover:bg-muted/80 text-muted-foreground/70'
-              )}
-              aria-label="Toggle replace"
-            >
-              <Replace size={14} />
-            </button>
-
-            <button
-              type="button"
-              onClick={closeDialog}
-              title={`Close (${shortcut})`}
-              className={cn(
-                'inline-flex items-center justify-center rounded-md',
-                'size-7 text-muted-foreground/70 hover:text-foreground hover:bg-muted/60 transition'
-              )}
-              aria-label="Close search"
-            >
-              <X size={14} />
-            </button>
-          </div>
-        </div>
+        <SearchInputRow
+          inputRef={inputRef}
+          searchText={searchText}
+          hasMatches={hasMatches}
+          activeDisplay={activeDisplay}
+          matchesCount={matchesCount}
+          caseSensitive={caseSensitive}
+          showReplace={showReplace}
+          shortcut={shortcut}
+          onSearchChange={searchInputEvent}
+          onInputKeyDown={handleSearchInputKeyDown}
+          onPrevious={previous}
+          onNext={next}
+          onToggleCaseSensitive={toggleCaseSensitive}
+          onToggleReplace={toggleReplace}
+          onClose={closeDialog}
+        />
 
         {/* Replace Row */}
         {showReplace && (
-          <div className="flex items-center gap-2 pt-1 border-t border-border/70">
-            <div className="flex items-center gap-2 flex-1 min-w-0">
-              <Replace size={14} className="text-muted-foreground/70" />
-              <input
-                ref={replaceInputRef}
-                value={replaceText}
-                placeholder="Replace with..."
-                onChange={replaceInputEvent}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault();
-                    if (e.ctrlKey || e.metaKey) {
-                      replaceAll();
-                    } else {
-                      replace();
-                    }
-                  } else if (e.key === 'Escape') {
-                    e.preventDefault();
-                    setShowReplace(false);
-                  } else if (e.altKey && e.key.toLowerCase() === 'c') {
-                    e.preventDefault();
-                    toggleCaseSensitive();
-                  } else if (e.altKey && e.key.toLowerCase() === 'r') {
-                    e.preventDefault();
-                    toggleReplace();
-                  }
-                }}
-                autoComplete="off"
-                autoCorrect="off"
-                autoCapitalize="none"
-                spellCheck={false}
-                className={cn(
-                  'bg-transparent text-sm text-foreground placeholder:text-muted-foreground/60',
-                  'focus:outline-none w-full'
-                )}
-              />
-            </div>
-
-            <div className="flex items-center gap-1">
-              <button
-                type="button"
-                onClick={replace}
-                disabled={!hasMatches || !replaceText}
-                title="Replace (Enter)"
-                className={cn(
-                  'px-2.5 py-1 text-xs rounded-md transition border border-border/60',
-                  'bg-muted/50 hover:bg-muted/80 disabled:opacity-30 disabled:cursor-not-allowed',
-                  'font-medium text-foreground/90'
-                )}
-              >
-                Replace
-              </button>
-              
-              <button
-                type="button"
-                onClick={replaceAll}
-                disabled={!hasMatches || !replaceText}
-                title="Replace All (Cmd/Ctrl+Enter)"
-                className={cn(
-                  'px-2.5 py-1 text-xs rounded-md transition border border-border/60',
-                  'bg-muted/50 hover:bg-muted/80 disabled:opacity-30 disabled:cursor-not-allowed',
-                  'font-medium text-foreground/90 whitespace-nowrap'
-                )}
-              >
-                Replace All
-              </button>
-            </div>
-          </div>
+          <SearchReplaceRow
+            inputRef={replaceInputRef}
+            replaceText={replaceText}
+            hasMatches={hasMatches}
+            onReplaceTextChange={replaceInputEvent}
+            onReplaceInputKeyDown={handleReplaceInputKeyDown}
+            onReplace={replace}
+            onReplaceAll={replaceAll}
+          />
         )}
       </div>
     </div>

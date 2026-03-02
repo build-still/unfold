@@ -11,6 +11,9 @@ import { Button } from "@/components/ui/button";
 import { ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+import { ColorSwatchButton } from "./atoms/color-swatch-button";
+import { ColorSwatchGrid } from "./atoms/color-swatch-grid";
+
 export interface BubbleColorMenuItem {
   name: string;
   color: string;
@@ -130,90 +133,69 @@ export const ColorSelector: FC<ColorSelectorProps> = ({
             <p className="text-xs font-medium text-editor-label mb-2">Recently used</p>
             <div className="flex gap-1.5">
               {activeTextColor && activeTextColor.color && (
-                <button
-                  className={cn(
-                    "w-8 h-8 rounded-lg border border-editor-swatch-border flex items-center justify-center transition-transform hover:scale-105",
-                    TEXT_COLORS.find((item) => item.name === activeTextColor.name)?.swatchClass
-                  )}
+                <ColorSwatchButton
+                  isActive={false}
+                  swatchClass={TEXT_COLORS.find((item) => item.name === activeTextColor.name)?.swatchClass ?? ''}
                   onClick={() => editor.chain().focus().setColor(activeTextColor.color).run()}
+                  title={activeTextColor.name}
                 />
               )}
               {activeHighlightColor && activeHighlightColor.color && (
-                <button
-                  className={cn(
-                    "w-8 h-8 rounded-lg border border-editor-swatch-border flex items-center justify-center transition-transform hover:scale-105",
-                    BACKGROUND_COLORS.find((item) => item.name === activeHighlightColor.name)?.swatchClass
-                  )}
+                <ColorSwatchButton
+                  isActive={false}
+                  swatchClass={BACKGROUND_COLORS.find((item) => item.name === activeHighlightColor.name)?.swatchClass ?? ''}
                   onClick={() => editor.chain().focus().setHighlight({ color: activeHighlightColor.color }).run()}
+                  title={activeHighlightColor.name}
                 />
               )}
             </div>
           </div>
 
           {/* Text color section */}
-          <div className="mb-3">
-            <p className="text-xs font-medium text-editor-label mb-2">Text color</p>
-            <div className="grid grid-cols-5 gap-1.5">
-              {TEXT_COLORS.map(({ name, color, textClass }, index) => {
-                const isActive = activeTextColor?.color === color;
-                return (
-                  <button
-                    key={index}
-                    className={cn(
-                      "w-8 h-8 rounded-lg border flex items-center justify-center transition-all hover:scale-105 bg-editor-picker-swatch-bg",
-                      isActive
-                        ? "border-editor-swatch-active-border ring-2 ring-editor-swatch-active-ring"
-                        : "border-editor-swatch-border hover:border-editor-swatch-border-hover"
-                    )}
-                    onClick={() => {
-                      if (name === "Default") {
-                        editor.commands.unsetColor();
-                      } else {
-                        editor.chain().focus().setColor(color).run();
-                      }
-                    }}
-                    title={name}
-                  >
-                    <span 
-                      className={cn("font-semibold text-sm", textClass)}
-                    >
-                      A
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
+          <ColorSwatchGrid label="Text color" className="mb-3">
+            {TEXT_COLORS.map(({ name, color, textClass }, index) => {
+              const isActive = activeTextColor?.color === color;
+              return (
+                <ColorSwatchButton
+                  key={index}
+                  isActive={isActive}
+                  swatchClass="bg-editor-picker-swatch-bg"
+                  onClick={() => {
+                    if (name === "Default") {
+                      editor.commands.unsetColor();
+                    } else {
+                      editor.chain().focus().setColor(color).run();
+                    }
+                  }}
+                  title={name}
+                >
+                  <span className={cn("font-semibold text-sm", textClass)}>A</span>
+                </ColorSwatchButton>
+              );
+            })}
+          </ColorSwatchGrid>
 
           {/* Background color section */}
-          <div>
-            <p className="text-xs font-medium text-editor-label mb-2">Background color</p>
-            <div className="grid grid-cols-5 gap-1.5">
-              {BACKGROUND_COLORS.map(({ name, color, swatchClass }, index) => {
-                const isActive = activeHighlightColor?.color === color;
-                return (
-                  <button
-                    key={index}
-                    className={cn(
-                      "w-8 h-8 rounded-lg border flex items-center justify-center transition-all hover:scale-105",
-                      swatchClass,
-                      isActive
-                        ? "border-editor-swatch-active-border ring-2 ring-editor-swatch-active-ring"
-                        : "border-editor-swatch-border hover:border-editor-swatch-border-hover"
-                    )}
-                    onClick={() => {
-                      if (name === "Default") {
-                        editor.commands.unsetHighlight();
-                      } else {
-                        editor.chain().focus().setHighlight({ color }).run();
-                      }
-                    }}
-                    title={name}
-                  />
-                );
-              })}
-            </div>
-          </div>
+          <ColorSwatchGrid label="Background color">
+            {BACKGROUND_COLORS.map(({ name, color, swatchClass }, index) => {
+              const isActive = activeHighlightColor?.color === color;
+              return (
+                <ColorSwatchButton
+                  key={index}
+                  isActive={isActive}
+                  swatchClass={swatchClass}
+                  onClick={() => {
+                    if (name === "Default") {
+                      editor.commands.unsetHighlight();
+                    } else {
+                      editor.chain().focus().setHighlight({ color }).run();
+                    }
+                  }}
+                  title={name}
+                />
+              );
+            })}
+          </ColorSwatchGrid>
         </PopoverContent>
       </Popover>
     </Tooltip>

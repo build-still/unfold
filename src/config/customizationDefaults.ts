@@ -63,7 +63,7 @@ export const customizationDefaultValues: CustomizationPropertyMap = {
   },
   'title.fontSize': {
     key: 'title.fontSize',
-    value: 52,
+    value: 47,
     valueType: 'fontSize',
   },
   'code.fontSize': {

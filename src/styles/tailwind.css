@@ -81,9 +81,14 @@ button:not(:disabled),
     color-mix(in srgb, var(--highlight-vivid) 88%, transparent 12%),
     color-mix(in srgb, var(--highlight-vivid) 68%, transparent 32%)
   );
-  --selection-gradient-start: color-mix(in srgb, var(--import-toggle-on-start) 38%, transparent);
-  --selection-gradient-end: color-mix(in srgb, var(--import-toggle-on-end) 30%, transparent);
-  --selection-solid: color-mix(in srgb, var(--import-toggle-on-mid) 36%, transparent);
+  --search-selection-bg: color-mix(in srgb, var(--highlight-vivid) 30%, transparent);
+  --search-active-bg: color-mix(in srgb, var(--highlight-vivid) 60%, var(--background-solid) 40%);
+  --search-active-border: var(--selection-ring);
+  --search-active-halo: color-mix(in srgb, var(--search-active-bg) 80%, transparent 70%);
+  --search-active-ring: 0 0 0 1px var(--search-active-border), 0 0 12px 6px var(--search-active-halo);
+  --selection-gradient-start: color-mix(in srgb, var(--search-selection-bg) 95%, transparent);
+  --selection-gradient-end: color-mix(in srgb, var(--search-selection-bg) 65%, transparent);
+  --selection-solid: var(--search-selection-bg);
   --secondary: #18181b;
   --secondary-foreground: #8e8d8d;
   --muted: #343434;
@@ -205,8 +210,6 @@ button:not(:disabled),
   --edge-drop-line-ring: rgba(255, 255, 255, 0.08);
   --scrollbar-thumb-default: rgba(255, 255, 255, 0.06);
   --scrollbar-thumb-hover: rgba(255, 255, 255, 0.12);
-  --search-active-bg: rgba(139, 92, 246, 0.35);
-  --search-active-ring: 0 0 0 2px rgba(139, 92, 246, 0.4);
   --resize-handle-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
   --resize-handle-hover-shadow: 0 2px 12px rgba(193, 123, 255, 0.6);
   --sidebar-selected-bg: #1a1a1c;
@@ -286,7 +289,7 @@ button:not(:disabled),
   --font-size-note: var(--font-size-md);
   --font-size-editor-base: calc(var(--font-size-note) + 1px);
   --font-size-note-small: var(--font-size-sm);
-  --font-size-document-title: 3.25rem;
+  --font-size-document-title: 2.9375rem;
   --font-size-heading-1: var(--font-size-3xl);
   --font-size-heading-2: var(--font-size-2xl);
   --font-size-heading-3: var(--font-size-xl);
@@ -421,10 +424,14 @@ button:not(:disabled),
     color-mix(in srgb, var(--highlight-vivid) 88%, white 12%),
     color-mix(in srgb, var(--highlight-vivid) 68%, white 6%)
   );
-  /* Text selection colors - unified with highlight color */
-  --selection-gradient-start: color-mix(in srgb, var(--highlight-vivid) 20%, transparent);
-  --selection-gradient-end: color-mix(in srgb, var(--highlight-vivid) 12%, transparent);
-  --selection-solid: color-mix(in srgb, var(--highlight-vivid) 16%, transparent);
+  --search-selection-bg: color-mix(in srgb, var(--highlight-vivid) 28%, white 72%);
+  --search-active-bg: color-mix(in srgb, var(--highlight-vivid) 54%, white 46%);
+  --search-active-border: var(--selection-ring);
+  --search-active-halo: color-mix(in srgb, var(--search-active-bg) 90%, transparent 60%);
+  --search-active-ring: `0 0 0 1px var(--search-active-border), 0 0 12px 6px var(--search-active-halo);
+  --selection-gradient-start: color-mix(in srgb, var(--search-selection-bg) 95%, transparent);
+  --selection-gradient-end: color-mix(in srgb, var(--search-selection-bg) 65%, transparent);
+  --selection-solid: var(--search-selection-bg);
   --secondary: #f4f4f5;
   --secondary-foreground: #09090b;
   --muted: #f4f4f5;
@@ -580,8 +587,6 @@ button:not(:disabled),
   --edge-drop-line-ring: rgba(0, 0, 0, 0.06);
   --scrollbar-thumb-default: rgba(0, 0, 0, 0.05);
   --scrollbar-thumb-hover: rgba(0, 0, 0, 0.09);
-  --search-active-bg: var(--selection-solid);
-  --search-active-ring: 0 0 0 2px rgba(0, 0, 0, 0.15);
   --resize-handle-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
   --resize-handle-hover-shadow: 0 2px 12px rgba(124, 58, 237, 0.4);
   --modal-surface: #f6f6f8;

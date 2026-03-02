@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "dev:tauri": "tauri dev",
+    "dev:tauri": "tauri dev --config src-tauri/tauri.conf.dev.json",
     "typecheck": "tsc --noEmit",
     "build": "tsc && vite build",
     "check": "pnpm typecheck && pnpm build",

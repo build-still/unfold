@@ -1,38 +1,25 @@
-use serde::{Deserialize, Serialize};
+use crate::config;
+use crate::models::images::{SaveImageRequest, SavePdfRequest, UploadImageRequest, UploadImageResponse};
 use std::fs;
+use std::path::PathBuf;
 use tauri::{AppHandle, Manager, command};
 use tauri_plugin_dialog::{DialogExt, FilePath};
 use uuid::Uuid;
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct UploadImageRequest {
-    note_id: String,
-    file_name: String,
-    base64_data: String,
-    mime_type: String,
-    size: u64,
+fn resolve_database_path(app: &AppHandle) -> Result<PathBuf, String> {
+    let app_data_dir = app
+        .path()
+        .app_local_data_dir()
+        .map_err(|e| format!("Failed to get app data directory: {}", e))?;
+
+    Ok(config::database_path(&app_data_dir))
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct UploadImageResponse {
-    id: String,
-    path: String,
-    size: u64,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct SavePdfRequest {
-    suggested_name: String,
-    pdf_bytes: Vec<u8>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct SaveImageRequest {
-    suggested_name: String,
-    source_url: Option<String>,
-    attachment_id: Option<String>,
-}
-
+/** Uploads an image file to the app's local data directory.
+ *
+ * Base64-decodes the image data, generates a unique filename using UUID,
+ * writes it to disk, and stores metadata in the database.
+ */
 #[command]
 pub async fn upload_image(
     app: AppHandle,
@@ -88,15 +75,12 @@ pub async fn upload_image(
     })
 }
 
+/** Retrieves the file path of an image from the database by attachment ID. */
 #[command]
 pub async fn get_image(app: AppHandle, attachment_id: String) -> Result<String, String> {
-    let db_path = app
-        .path()
-        .app_local_data_dir()
-        .map_err(|e| format!("Failed to get app data directory: {}", e))?
-        .join("unfold.db");
+    let db_path = resolve_database_path(&app)?;
 
-    let conn = rusqlite::Connection::open(db_path)
+    let conn = rusqlite::Connection::open(&db_path)
         .map_err(|e| format!("Failed to open database: {}", e))?;
 
     let mut stmt = conn
@@ -110,15 +94,12 @@ pub async fn get_image(app: AppHandle, attachment_id: String) -> Result<String, 
     Ok(path)
 }
 
+/** Deletes an image from both the database and the file system. */
 #[command]
 pub async fn delete_image(app: AppHandle, attachment_id: String) -> Result<(), String> {
-    let db_path = app
-        .path()
-        .app_local_data_dir()
-        .map_err(|e| format!("Failed to get app data directory: {}", e))?
-        .join("unfold.db");
+    let db_path = resolve_database_path(&app)?;
 
-    let conn = rusqlite::Connection::open(db_path)
+    let conn = rusqlite::Connection::open(&db_path)
         .map_err(|e| format!("Failed to open database: {}", e))?;
 
     // Get file path before deleting from DB
@@ -140,6 +121,7 @@ pub async fn delete_image(app: AppHandle, attachment_id: String) -> Result<(), S
     Ok(())
 }
 
+/** Stores image metadata in the database (internal helper). */
 async fn store_image_metadata(
     app: &AppHandle,
     id: &str,
@@ -149,13 +131,9 @@ async fn store_image_metadata(
     size: u64,
     mime_type: &str,
 ) -> Result<(), String> {
-    let db_path = app
-        .path()
-        .app_local_data_dir()
-        .map_err(|e| format!("Failed to get app data directory: {}", e))?
-        .join("unfold.db");
+    let db_path = resolve_database_path(app)?;
 
-    let conn = rusqlite::Connection::open(db_path)
+    let conn = rusqlite::Connection::open(&db_path)
         .map_err(|e| format!("Failed to open database: {}", e))?;
 
     conn.execute(
@@ -175,50 +153,7 @@ async fn store_image_metadata(
     Ok(())
 }
 
-#[command]
-pub async fn check_database_schema(app: AppHandle) -> Result<String, String> {
-    let db_path = app
-        .path()
-        .app_local_data_dir()
-        .map_err(|e| format!("Failed to get app data directory: {}", e))?
-        .join("unfold.db");
 
-    let conn = rusqlite::Connection::open(&db_path)
-        .map_err(|e| format!("Failed to open database: {}", e))?;
-
-    // Check if images table exists and get its schema
-    let table_info: Result<Vec<String>, _> =
-        conn.prepare("PRAGMA table_info(images)")
-            .and_then(|mut stmt| {
-                let rows = stmt.query_map([], |row| {
-                    let name: String = row.get(1)?;
-                    Ok(name)
-                })?;
-                rows.collect()
-            });
-
-    match table_info {
-        Ok(columns) => {
-            let has_file_path = columns.iter().any(|col| col == "file_path");
-            if has_file_path {
-                Ok(format!(
-                    "✓ Database schema is correct. DB at: {}",
-                    db_path.display()
-                ))
-            } else {
-                Ok(format!(
-                    "✗ Images table exists but missing 'file_path' column.\nColumns: {:?}\nDB at: {}\n\nTo fix: Delete this database file and restart the app.",
-                    columns,
-                    db_path.display()
-                ))
-            }
-        }
-        Err(_) => Ok(format!(
-            "✗ Images table does not exist.\nDB at: {}\n\nTo fix: Delete this database file and restart the app.",
-            db_path.display()
-        )),
-    }
-}
 
 fn get_extension_from_mime(mime_type: &str) -> &str {
     match mime_type {
@@ -234,104 +169,11 @@ fn get_extension_from_mime(mime_type: &str) -> &str {
     }
 }
 
-#[command]
-pub async fn check_nodes_schema(app: AppHandle) -> Result<String, String> {
-    let db_path = app
-        .path()
-        .app_local_data_dir()
-        .map_err(|e| format!("Failed to get app data directory: {}", e))?
-        .join("unfold.db");
 
-    let conn = rusqlite::Connection::open(&db_path)
-        .map_err(|e| format!("Failed to open database: {}", e))?;
 
-    let mut stmt = conn
-        .prepare("PRAGMA table_info(nodes)")
-        .map_err(|e| format!("Failed to prepare statement: {}", e))?;
 
-    let cols = stmt
-        .query_map([], |row| {
-            let name: String = row.get(1)?;
-            Ok(name)
-        })
-        .map_err(|e| format!("Failed to query schema: {}", e))?;
 
-    let mut col_names: Vec<String> = Vec::new();
-    for c in cols {
-        col_names.push(c.map_err(|e| format!("Row error: {}", e))?);
-    }
-
-    let has_type = col_names.iter().any(|c| c == "type");
-    Ok(format!(
-        "nodes columns: {:?}\ncontains 'type': {}\nDB: {}",
-        col_names,
-        has_type,
-        db_path.display()
-    ))
-}
-
-#[command]
-pub async fn repair_nodes_schema(app: AppHandle) -> Result<String, String> {
-    let db_path = app
-        .path()
-        .app_local_data_dir()
-        .map_err(|e| format!("Failed to get app data directory: {}", e))?
-        .join("unfold.db");
-
-    let conn = rusqlite::Connection::open(&db_path)
-        .map_err(|e| format!("Failed to open database: {}", e))?;
-
-    // Check if 'type' column exists
-    let mut stmt = conn
-        .prepare("PRAGMA table_info(nodes)")
-        .map_err(|e| format!("Failed to prepare statement: {}", e))?;
-    let cols = stmt
-        .query_map([], |row| {
-            let name: String = row.get(1)?;
-            Ok(name)
-        })
-        .map_err(|e| format!("Failed to query schema: {}", e))?;
-    let mut has_type = false;
-    for c in cols {
-        if c.map_err(|e| format!("Row error: {}", e))? == "type" {
-            has_type = true;
-            break;
-        }
-    }
-
-    if !has_type {
-        return Ok("nodes schema OK (no 'type' column)".into());
-    }
-
-    // Rebuild table without 'type' column
-    let sql = r#"
-        BEGIN TRANSACTION;
-            CREATE TABLE IF NOT EXISTS nodes_new (
-                id TEXT PRIMARY KEY NOT NULL,
-                space_id TEXT NOT NULL,
-                parent_id TEXT,
-                name TEXT NOT NULL,
-                content TEXT,
-                is_open INTEGER NOT NULL DEFAULT 0,
-                sort_order INTEGER NOT NULL DEFAULT 0,
-                FOREIGN KEY (space_id) REFERENCES spaces(id) ON DELETE CASCADE,
-                FOREIGN KEY (parent_id) REFERENCES nodes(id) ON DELETE CASCADE
-            );
-            INSERT INTO nodes_new (id, space_id, parent_id, name, content, is_open, sort_order)
-                SELECT id, space_id, parent_id, name, content, is_open, sort_order FROM nodes;
-            DROP TABLE nodes;
-            ALTER TABLE nodes_new RENAME TO nodes;
-            CREATE INDEX IF NOT EXISTS idx_nodes_space_id ON nodes(space_id);
-            CREATE INDEX IF NOT EXISTS idx_nodes_parent_id ON nodes(parent_id);
-        COMMIT;
-    "#;
-
-    conn.execute_batch(sql)
-        .map_err(|e| format!("Failed to repair schema: {}", e))?;
-
-    Ok("Repaired nodes schema (removed 'type' column)".into())
-}
-
+/** Opens a save dialog and writes a PDF file to the selected location. */
 #[command]
 pub async fn save_pdf_file(app: AppHandle, request: SavePdfRequest) -> Result<(), String> {
     let file_path = app
@@ -353,18 +195,26 @@ pub async fn save_pdf_file(app: AppHandle, request: SavePdfRequest) -> Result<()
             .map_err(|_| "Failed to resolve selected file path.".to_string())?,
     };
 
-    fs::write(&path, &request.pdf_bytes)
-        .map_err(|e| format!("Failed to write PDF file: {}", e))?;
+    fs::write(&path, &request.pdf_bytes).map_err(|e| format!("Failed to write PDF file: {}", e))?;
 
     Ok(())
 }
 
+/** Opens a save dialog and writes an image file to the selected location.
+ * 
+ * Can source the image from:
+ * - An existing attachment ID (retrieves from app storage)
+ * - A remote HTTPS URL (downloads the image)
+ */
 #[command]
 pub async fn save_image_file(app: AppHandle, request: SaveImageRequest) -> Result<(), String> {
     let file_path = app
         .dialog()
         .file()
-        .add_filter("Image", &["png", "jpg", "jpeg", "gif", "webp", "bmp", "svg", "tiff"])
+        .add_filter(
+            "Image",
+            &["png", "jpg", "jpeg", "gif", "webp", "bmp", "svg", "tiff"],
+        )
         .set_file_name(&request.suggested_name)
         .blocking_save_file();
 
@@ -403,7 +253,10 @@ pub async fn save_image_file(app: AppHandle, request: SaveImageRequest) -> Resul
             .map_err(|e| format!("Failed to fetch image source: {}", e))?;
 
         if !response.status().is_success() {
-            return Err(format!("Failed to fetch image source: HTTP {}", response.status()));
+            return Err(format!(
+                "Failed to fetch image source: HTTP {}",
+                response.status()
+            ));
         }
 
         response

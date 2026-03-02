@@ -1,15 +1,8 @@
-import React, { Dispatch, FC, SetStateAction } from "react";
+import { Dispatch, FC, SetStateAction } from "react";
 import type { Editor } from "@tiptap/react";
 import { useEditorState } from "@tiptap/react";
-import { BracesIcon, CheckIcon, ChevronDown, Heading1Icon, Heading2Icon, Heading3Icon, ListIcon, ListOrdered, ListTodo, TextQuote, TypeIcon } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Tooltip, AppTooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { BracesIcon, Heading1Icon, Heading2Icon, Heading3Icon, ListIcon, ListOrdered, ListTodo, TextQuote, TypeIcon } from "lucide-react";
+import { EditorBubbleDropdown, type BubbleDropdownItem } from "@/components/molecules/editor-bubble-dropdown";
 
 
 interface NodeSelectorProps {
@@ -18,13 +11,6 @@ interface NodeSelectorProps {
   setIsOpen: Dispatch<SetStateAction<boolean>>;
   onSelect?: () => void;
   container?: HTMLElement | null;
-}
-
-export interface BubbleMenuItem {
-  name: string;
-  icon: React.ElementType;
-  command: () => void;
-  isActive: () => boolean;
 }
 
 export const NodeSelector: FC<NodeSelectorProps> = ({
@@ -56,7 +42,7 @@ export const NodeSelector: FC<NodeSelectorProps> = ({
     },
   });
 
-  const items: BubbleMenuItem[] = [
+  const items: BubbleDropdownItem[] = [
     {
       name: "Text",
       icon: TypeIcon,
@@ -128,47 +114,16 @@ export const NodeSelector: FC<NodeSelectorProps> = ({
   };
 
   return (
-    <Tooltip>
-      <DropdownMenu open={isOpen} onOpenChange={setIsOpen} modal={false}>
-        <TooltipTrigger asChild>
-          <DropdownMenuTrigger asChild>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="bubble-node-trigger h-8 gap-1 px-2 rounded-lg"
-              onMouseDown={(e) => e.preventDefault()}
-            >
-              {activeItem?.name}
-              <ChevronDown className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-        </TooltipTrigger>
-        <AppTooltipContent label="Turn into" />
-
-      <DropdownMenuContent
-        align="start"
-        className="bubble-node-menu w-48"
-        container={container}
-        onCloseAutoFocus={(e) => e.preventDefault()}
-      >
-        {items.map((item, index) => (
-          <DropdownMenuItem
-            key={index}
-            className="bubble-node-item"
-            onMouseDown={(e) => {
-              e.preventDefault();
-              item.command();
-              onSelect?.();
-            }}
-            onSelect={(e) => e.preventDefault()}
-          >
-            <item.icon className="h-4 w-4" />
-            <span className="flex-1">{item.name}</span>
-            {activeItem.name === item.name && <CheckIcon className="h-4 w-4 text-primary" />}
-          </DropdownMenuItem>
-        ))}
-      </DropdownMenuContent>
-    </DropdownMenu>
-    </Tooltip>
+    <EditorBubbleDropdown
+      isOpen={isOpen}
+      setIsOpen={setIsOpen}
+      items={items}
+      tooltipLabel="Turn into"
+      trigger={<>{activeItem?.name}</>}
+      container={container}
+      onSelect={onSelect}
+      triggerClassName="bubble-node-trigger h-8 gap-1 px-2 rounded-lg"
+      contentClassName="bubble-node-menu w-48"
+    />
   );
 };

@@ -6,6 +6,7 @@ import { appApi } from '@/store/api/app-api';
 export const selectThemePreference = (state: RootState) => state.ui.themePreference;
 export const selectActiveSpaceId = (state: RootState) => state.ui.activeSpaceId;
 export const selectActiveFileId = (state: RootState) => state.ui.activeFileId;
+export const selectPendingFileId = (state: RootState) => state.ui.pendingFileId;
 
 export const selectWorkspaceQuery = appApi.endpoints.getWorkspace.select();
 export const selectWorkspaceData = createSelector(

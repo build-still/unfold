@@ -18,7 +18,6 @@ import {
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { setActiveFileId, setActiveSpaceId } from '@/store/slices/ui-slice';
 import {
-  appApi,
   useAddNodeMutation,
   useCreateSpaceMutation,
   useDeleteNodeMutation,
@@ -58,40 +57,6 @@ export interface FileSystemState {
   getNodePath: (id: string) => Node[];
   deleteNode: (id: string) => Promise<void>;
   getPreviousVisibleNode: (id: string) => string | null;
-}
-
-function resolveInitialSpaceId(spaces: Space[], preferredId: string): string {
-  if (spaces.length === 0) {
-    return '';
-  }
-
-  if (preferredId && spaces.some((space) => space.id === preferredId)) {
-    return preferredId;
-  }
-
-  const mineSpace = spaces.find((space) => space.name === 'mine');
-  return mineSpace?.id ?? spaces[0].id;
-}
-
-export function useInitializeWorkspaceSelection(): void {
-  const dispatch = useAppDispatch();
-  const spaces = useAppSelector(selectSpaces);
-  const activeSpaceId = useAppSelector(selectActiveSpaceId);
-
-  useEffect(() => {
-    const subscription = dispatch(appApi.endpoints.getWorkspace.initiate());
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, [dispatch]);
-
-  useEffect(() => {
-    const resolvedActiveSpaceId = resolveInitialSpaceId(spaces, activeSpaceId);
-
-    if (resolvedActiveSpaceId !== activeSpaceId) {
-      dispatch(setActiveSpaceId(resolvedActiveSpaceId));
-    }
-  }, [activeSpaceId, dispatch, spaces]);
 }
 
 export function useFileSystemStore(): FileSystemState {

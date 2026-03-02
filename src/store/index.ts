@@ -65,5 +65,6 @@ export const store = configureStore({
     getDefaultMiddleware().concat(appApi.middleware, persistenceMiddleware),
 });
 
+export type AppStore = typeof store;
 export type RootState = ReturnType<typeof store.getState>;
 export type AppDispatch = typeof store.dispatch;

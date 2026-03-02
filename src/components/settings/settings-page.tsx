@@ -1,5 +1,5 @@
 import React from 'react';
-import CustomizabilitySection from '@/components/settings/CustomizabilitySection';
+import CustomizabilitySection from '@/components/settings/customizability-section';
 
 interface SettingsPageProps {
   isOpen: boolean;

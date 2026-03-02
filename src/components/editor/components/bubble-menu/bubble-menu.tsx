@@ -8,13 +8,13 @@ import {
 import { BubbleMenu, BubbleMenuProps } from '@tiptap/react/menus'
 import { BoldIcon, CodeIcon, ItalicIcon, StrikethroughIcon, UnderlineIcon } from "lucide-react";
 import { editorClasses } from "../../styles/extension-styles";
-import { Button } from "@/components/ui/button";
 import { NodeSelector } from "./node-selector";
 import { ButtonGroup } from "@/components/ui/button-group";
 import { ColorSelector } from "./color-selector";
 import { TextAlignmentSelector } from "./text-alignment-selector";
 import { LinkSelector } from "./link-selector";
-import { Tooltip, AppTooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { BubbleSeparator } from "./atoms/bubble-separator";
+import { FormatToolbarButton } from "./atoms/format-toolbar-button";
 
 export interface BubbleMenuItem {
     name: string;
@@ -108,31 +108,21 @@ export const EditorBubbleMenu: FC<EditorBubbleMenuProps> = (props) => {
           container={menuRef.current}
         />
 
-        <div className="w-px h-6 bg-border mx-1" />
+        <BubbleSeparator />
 
         <ButtonGroup>
           {items.map((item) => (
-            <Tooltip key={item.name}>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  data-active={item.isActive()}
-                  onClick={(e) => {
-                    e.preventDefault();
-                    item.command();
-                  }}
-                  className={`h-8 w-8 p-0 rounded-lg ${item.isActive() ? "bg-sidebar-item-hover-bg/95 text-foreground" : ""}`}
-                >
-                  {item.icon}
-                </Button>
-              </TooltipTrigger>
-              <AppTooltipContent label={item.label} />
-            </Tooltip>
+            <FormatToolbarButton
+              key={item.name}
+              label={item.label}
+              isActive={item.isActive()}
+              onClick={item.command}
+              icon={item.icon}
+            />
           ))}
         </ButtonGroup>
 
-        <div className="w-px h-6 bg-border mx-1" />
+        <BubbleSeparator />
 
         <LinkSelector editor={props.editor} {...bindSelector("link")} />
 
@@ -142,7 +132,7 @@ export const EditorBubbleMenu: FC<EditorBubbleMenuProps> = (props) => {
           container={menuRef.current}
         />
 
-        <div className="w-px h-6 bg-border mx-1" />
+        <BubbleSeparator />
 
         <TextAlignmentSelector
           editor={props.editor}

@@ -25,4 +25,14 @@ export default defineConfig(async () => ({
       ignored: ["**/src-tauri/**"],
     },
   },
+  // 4. multi-page: emit splashscreen.html alongside the main app so Tauri
+  //    can load it in the native splash window during production builds.
+  build: {
+    rollupOptions: {
+      input: {
+        main: path.resolve(__dirname, 'index.html'),
+        splashscreen: path.resolve(__dirname, 'splashscreen.html'),
+      },
+    },
+  },
 }));

@@ -1,18 +1,13 @@
 import { useParams } from "@tanstack/react-router";
 import { useFileSystem } from "@/contexts/FileSystemContext";
-import { useFileValidation } from "@/hooks/use-file-validation";
 import TitleEditor from "./title-editor";
 import PageEditor from "./page-editor";
 import { EditorSkeleton } from "./editor-skeleton";
 
 function FullPageEditor() {
-  const { spaceId, fileId } = useParams({ from: "/spaces/$spaceId/files/$fileId" });
-  const { getNode, isLoading } = useFileSystem();
-  useFileValidation(spaceId, fileId);
+  const { fileId } = useParams({ from: "/spaces/$spaceId/files/$fileId" });
+  const { getNode } = useFileSystem();
 
-  if (isLoading) {
-    return <EditorSkeleton />;
-  }
   const file = fileId ? getNode(fileId) : null;
   if (fileId && !file) {
     return <EditorSkeleton />;
