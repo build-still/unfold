@@ -21,15 +21,22 @@ const GROUP_MAX_W_CLASS: Record<RowActionsRevealProps['group'], string> = {
   'sub-item-row': 'group-hover/sub-item-row:max-w-22',
 };
 
+const GROUP_PADDING_CLASS: Record<RowActionsRevealProps['group'], string> = {
+  'pinned-item':  'group-hover/pinned-item:pl-2',
+  'item-row':     'group-hover/item-row:pl-2',
+  'sub-item-row': 'group-hover/sub-item-row:pl-2',
+};
+
 export function RowActionsReveal({ group, className, children }: RowActionsRevealProps) {
   return (
     <div
       className={cn(
-        'flex items-center gap-1 pl-2 overflow-hidden transition-[max-width,opacity,transform] duration-220',
+        'flex items-center gap-1 overflow-hidden transition-[max-width,opacity,transform,padding] duration-220',
         SIDEBAR_TRANSITION_EASE_CLASS,
-        'opacity-0 max-w-0 pointer-events-none translate-x-1',
+        'opacity-0 max-w-0 pl-0 pointer-events-none translate-x-1',
         GROUP_BASE_CLASS[group],
         GROUP_MAX_W_CLASS[group],
+        GROUP_PADDING_CLASS[group],
         className,
       )}
       role="none"

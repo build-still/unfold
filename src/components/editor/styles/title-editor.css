@@ -1,6 +1,7 @@
 /* Title Editor Styles */
 .title-editor {
   width: 100%;
+  overflow-anchor: none;
 }
 
 .title-editor .ProseMirror {

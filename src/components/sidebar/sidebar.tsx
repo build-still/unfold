@@ -258,7 +258,7 @@ const Sidebar = memo(function Sidebar({ side = 'left' }: SidebarProps) {
         <div className="h-1" />
       </SidebarHeader>
 
-         <SidebarContent id="sidebar-scroll-content" className="px-3 overflow-y-auto [scrollbar-gutter:stable]">
+         <SidebarContent id="sidebar-scroll-content" className="px-2 overflow-y-auto [scrollbar-gutter:stable]">
         {!isLoading && pinnedNodes.length > 0 && (
           <div className="mb-1">
             <SmallTextLabel>pinned</SmallTextLabel>

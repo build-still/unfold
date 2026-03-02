@@ -85,6 +85,9 @@ function TitleEditor({ fileId }: TitleEditorProps) {
 
           if (event.key === "Enter" && !event.shiftKey && isAtEnd) {
             event.preventDefault();
+            const scrollContainer = view.dom.closest('.editor-scroll-stable') as HTMLElement | null;
+            const scrollTopBefore = scrollContainer?.scrollTop ?? 0;
+
             const pageEditor = pageEditorRef.current;
             if (pageEditor) {
               const firstNode = pageEditor.state.doc.firstChild;
@@ -113,6 +116,15 @@ function TitleEditor({ fileId }: TitleEditorProps) {
                   state.tr.setSelection(selection)
                 );
                 pageEditor.commands.focus(undefined, { scrollIntoView: false });
+              }
+
+              if (scrollContainer) {
+                requestAnimationFrame(() => {
+                  scrollContainer.scrollTop = scrollTopBefore;
+                  requestAnimationFrame(() => {
+                    scrollContainer.scrollTop = scrollTopBefore;
+                  });
+                });
               }
             }
             return true;

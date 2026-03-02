@@ -21,12 +21,23 @@ html, body, #root {
 
 .editor-scroll-stable {
   scrollbar-gutter: stable;
+  overflow-anchor: none;
 }
 
 @supports not (scrollbar-gutter: stable) {
   .editor-scroll-stable {
     overflow-y: scroll !important;
   }
+}
+
+.sidebar-native-scroll-hidden {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.sidebar-native-scroll-hidden::-webkit-scrollbar {
+  width: 0;
+  height: 0;
 }
 
 img, picture, video, canvas, svg {
