@@ -47,11 +47,18 @@ function useNodeActions(node: SidebarNode) {
   }, [selectedFileId, node.id, getPreviousVisibleNode, navigate, activeSpaceId, deleteNode, dispatch]);
 
   const handleCreateChild = useCallback(async () => {
-    const newId = await addNode(node.id);
-    markNodeAsRecentlyCreated(newId);
-    dispatch(setPendingFileId(newId));
-    navigate({ to: '/spaces/$spaceId/files/$fileId', params: { spaceId: activeSpaceId, fileId: newId } });
-  }, [addNode, node.id, navigate, activeSpaceId, dispatch]);
+    const createdNode = await addNode(node.id);
+    if (!createdNode) {
+      return;
+    }
+
+    markNodeAsRecentlyCreated(createdNode.id);
+    dispatch(setPendingFileId(createdNode.id));
+    navigate({
+      to: '/spaces/$spaceId/files/$fileId',
+      params: { spaceId: createdNode.spaceId, fileId: createdNode.id },
+    });
+  }, [addNode, node.id, navigate, dispatch]);
 
   const handleTogglePin = useCallback(async () => {
     await togglePinNode(node.id);
@@ -59,11 +66,18 @@ function useNodeActions(node: SidebarNode) {
 
   const handleAddChild = useCallback(async (event: React.MouseEvent) => {
     event.stopPropagation();
-    const newId = await addNode(node.id);
-    markNodeAsRecentlyCreated(newId);
-    dispatch(setPendingFileId(newId));
-    navigate({ to: '/spaces/$spaceId/files/$fileId', params: { spaceId: activeSpaceId, fileId: newId } });
-  }, [addNode, node.id, navigate, activeSpaceId, dispatch]);
+    const createdNode = await addNode(node.id);
+    if (!createdNode) {
+      return;
+    }
+
+    markNodeAsRecentlyCreated(createdNode.id);
+    dispatch(setPendingFileId(createdNode.id));
+    navigate({
+      to: '/spaces/$spaceId/files/$fileId',
+      params: { spaceId: createdNode.spaceId, fileId: createdNode.id },
+    });
+  }, [addNode, node.id, navigate, dispatch]);
 
   return {
     activeSpaceId,

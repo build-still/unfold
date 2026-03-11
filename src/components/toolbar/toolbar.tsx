@@ -10,6 +10,8 @@ import { Ripple } from '@/components/ui/ripple';
 import { useSidebar } from '@/components/ui/sidebar';
 import { SettingsModal } from '@/components/toolbar/settings-modal';
 import { useFileSystem } from '@/contexts/FileSystemContext';
+import { useAppDispatch } from '@/store/hooks';
+import { setPendingFileId } from '@/store/slices/ui-slice';
 import { type PrintScope } from '@/utils/print';
 import { useExportActions } from '@/features/toolbar/hooks/use-export-actions';
 import { useImportActions } from '@/features/toolbar/hooks/use-import-actions';
@@ -17,10 +19,11 @@ import { useRelativeEditedTime } from '@/features/toolbar/hooks/use-relative-edi
 
 export const Toolbar = memo(function Toolbar() {
   const { toggleSidebar } = useSidebar();
+  const dispatch = useAppDispatch();
   const navigate = useNavigate();
   const toggleSidebarShortcut = getShortcutDisplay(KEYBOARD_SHORTCUTS.TOGGLE_SIDEBAR);
-  const { fileId, spaceId } = useParams({ strict: false });
-  const { fileTree, getNode, spaceName, activeSpaceId, addNode, renameNode, updateNodeContent } = useFileSystem();
+  const { fileId } = useParams({ strict: false });
+  const { fileTree, getNode, spaceName, addNode, renameNode, updateNodeContent } = useFileSystem();
 
   const [printScope, setPrintScope] = useState<PrintScope>('current');
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -50,14 +53,12 @@ export const Toolbar = memo(function Toolbar() {
     addNode,
     renameNode,
     updateNodeContent,
-    navigateToFile: (newFileId) => {
-      const targetSpaceId = spaceId ?? activeSpaceId;
-      if (targetSpaceId) {
-        navigate({
-          to: '/spaces/$spaceId/files/$fileId',
-          params: { spaceId: targetSpaceId, fileId: newFileId },
-        });
-      }
+    navigateToFile: (newFileId, targetSpaceId) => {
+      dispatch(setPendingFileId(newFileId));
+      navigate({
+        to: '/spaces/$spaceId/files/$fileId',
+        params: { spaceId: targetSpaceId, fileId: newFileId },
+      });
     },
     onImported: () => {
       setIsSettingsOpen(false);
