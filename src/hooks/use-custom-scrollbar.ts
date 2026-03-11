@@ -6,7 +6,7 @@ type ScrollThumbState = {
 };
 
 const MIN_THUMB_HEIGHT = 28;
-const OVERFLOW_TOLERANCE_PX = 2;
+const OVERFLOW_TOLERANCE_PX = 8;
 
 type UseCustomScrollbarResult = {
   scrollRef: React.RefObject<HTMLDivElement | null>;
@@ -42,7 +42,7 @@ export function useCustomScrollbar(): UseCustomScrollbarResult {
     }
 
     const { scrollHeight, clientHeight, scrollTop } = scrollEl;
-    const overflowAmount = scrollHeight - clientHeight;
+    const overflowAmount = Math.ceil(scrollHeight - clientHeight);
     const canScroll = overflowAmount > OVERFLOW_TOLERANCE_PX;
     setIsScrollable(canScroll);
 

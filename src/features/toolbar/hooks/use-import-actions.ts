@@ -13,10 +13,10 @@ function toErrorMessage(error: unknown): string {
 }
 
 interface UseImportActionsParams {
-  addNode: (parentId: string | null) => Promise<string>;
+  addNode: (parentId: string | null) => Promise<{ id: string; spaceId: string } | null>;
   renameNode: (nodeId: string, name: string) => Promise<void>;
   updateNodeContent: (nodeId: string, content: string) => Promise<void>;
-  navigateToFile: (fileId: string) => void;
+  navigateToFile: (fileId: string, spaceId: string) => void;
   onImported?: () => void;
 }
 
@@ -36,14 +36,14 @@ export function useImportActions({
 
   const createImportedNote = useCallback(
     async (title: string, contentHtml: string) => {
-      const newId = await addNode(null);
-      if (!newId) {
+      const createdNode = await addNode(null);
+      if (!createdNode) {
         throw new Error('Could not create a new file for imported content.');
       }
 
-      await renameNode(newId, title);
-      await updateNodeContent(newId, contentHtml);
-      navigateToFile(newId);
+      await renameNode(createdNode.id, title);
+      await updateNodeContent(createdNode.id, contentHtml);
+      navigateToFile(createdNode.id, createdNode.spaceId);
       setImportError(null);
       onImported?.();
     },

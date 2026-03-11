@@ -1,4 +1,4 @@
-import { forwardRef, useImperativeHandle } from 'react';
+import { forwardRef, useImperativeHandle, useState } from 'react';
 
 import { useCustomScrollbar } from '@/hooks/use-custom-scrollbar';
 import { cn } from '@/lib/utils';
@@ -14,6 +14,7 @@ export const ScrollableContainer = forwardRef<HTMLDivElement, ScrollableContaine
   { children, className, contentClassName, contentId },
   ref,
 ) {
+  const [isHovered, setIsHovered] = useState(false);
   const {
     scrollRef,
     wrapperRef,
@@ -30,7 +31,12 @@ export const ScrollableContainer = forwardRef<HTMLDivElement, ScrollableContaine
   useImperativeHandle(ref, () => scrollRef.current as HTMLDivElement, [scrollRef]);
 
   return (
-    <div ref={wrapperRef} className={cn('group/scrollable relative min-h-0 h-full overflow-hidden', className)}>
+    <div
+      ref={wrapperRef}
+      className={cn('relative min-h-0 h-full overflow-hidden', className)}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+    >
       <div
         ref={scrollRef}
         id={contentId}
@@ -49,7 +55,9 @@ export const ScrollableContainer = forwardRef<HTMLDivElement, ScrollableContaine
           'absolute right-1 top-1 bottom-1 z-20 w-2 transition-opacity duration-150',
           isScrollable
             ? cn(
-              isDragging ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none group-hover/scrollable:opacity-100 group-hover/scrollable:pointer-events-auto',
+              (isDragging || isHovered)
+                ? 'opacity-100 pointer-events-auto'
+                : 'opacity-0 pointer-events-none',
             )
             : 'opacity-0 pointer-events-none',
         )}
@@ -59,7 +67,12 @@ export const ScrollableContainer = forwardRef<HTMLDivElement, ScrollableContaine
           ref={thumbRef}
           role="scrollbar"
           aria-orientation="vertical"
-          className="absolute inset-x-0 rounded-full bg-sidebar-border/80 hover:bg-sidebar-foreground/80"
+          className={cn(
+            'absolute inset-x-0 rounded-full transition-colors duration-120',
+            isDragging
+              ? 'bg-scrollbar-thumb-hover'
+              : 'bg-scrollbar-thumb-default hover:bg-scrollbar-thumb-hover',
+          )}
           style={{
             height: `${thumb.height}px`,
             transform: `translateY(${thumb.top}px)`,

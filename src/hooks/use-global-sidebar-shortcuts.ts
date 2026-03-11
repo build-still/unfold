@@ -5,6 +5,8 @@ import { useFileSystem } from '@/contexts/FileSystemContext';
 import { useEditorContext } from '@/contexts/EditorContext';
 import { KEYBOARD_SHORTCUTS } from '@/config/keyboard-shortcuts';
 import { dispatchAppEvent, APP_EVENTS } from '@/lib/app-events';
+import { useAppDispatch } from '@/store/hooks';
+import { setPendingFileId } from '@/store/slices/ui-slice';
 
 const parseAccelerator = (accelerator: string) => {
   const parts = accelerator.split('+');
@@ -21,9 +23,10 @@ const parseAccelerator = (accelerator: string) => {
 
 export function  useGlobalSidebarShortcuts() {
   const { fileId } = useParams({ strict: false });
-  const { addNode, togglePinNode, activeSpaceId } = useFileSystem();
+  const { addNode, togglePinNode } = useFileSystem();
   const { pageEditorRef, titleEditorRef } = useEditorContext();
   const navigate = useNavigate();
+  const dispatch = useAppDispatch();
 
   const isEditingContent = (): boolean => {
     const activeElement = document.activeElement as HTMLElement;
@@ -54,15 +57,15 @@ export function  useGlobalSidebarShortcuts() {
         event.key.toLowerCase() === createFileShortcut.key &&
         (!createFileShortcut.requiresCmdOrCtrl || isCmdOrCtrl) &&
         (!createFileShortcut.requiresAlt || isAlt) &&
-        (!createFileShortcut.requiresShift || isShift) &&
-        !isEditingContent()
+        (!createFileShortcut.requiresShift || isShift)
       ) {
         event.preventDefault();
-        const newId = await addNode(fileId || null);
-        if (activeSpaceId) {
+        const createdNode = await addNode(fileId || null);
+        if (createdNode) {
+          dispatch(setPendingFileId(createdNode.id));
           navigate({
             to: '/spaces/$spaceId/files/$fileId',
-            params: { spaceId: activeSpaceId, fileId: newId },
+            params: { spaceId: createdNode.spaceId, fileId: createdNode.id },
           });
         }
         return;
@@ -97,5 +100,5 @@ export function  useGlobalSidebarShortcuts() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [activeSpaceId, fileId, addNode, togglePinNode, navigate, pageEditorRef, titleEditorRef]);
+  }, [dispatch, fileId, addNode, togglePinNode, navigate, pageEditorRef, titleEditorRef]);
 }

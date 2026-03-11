@@ -9,7 +9,6 @@ import { KEYBOARD_SHORTCUTS, getShortcutDisplay } from '@/config/keyboard-shortc
 import { Tooltip, TooltipTrigger, AppTooltipContent } from '@/components/ui/tooltip';
 import {
   Sidebar as ShadcnSidebar,
-  SidebarContent,
   SidebarFooter,
   SidebarHeader,
   SidebarMenu,
@@ -17,8 +16,11 @@ import {
 import { Plus } from 'lucide-react';
 import { SidebarTreeSkeleton } from '@/components/skeletons/workspace-skeleton';
 import { useSelectedFileId } from '@/store/hooks/use-filesystem-store';
+import { useAppDispatch } from '@/store/hooks';
+import { setPendingFileId } from '@/store/slices/ui-slice';
 import { SmallTextLabel } from '@/components/common/labels/small-text-label';
 import { SidebarActionButton } from '@/components/common/sidebar/sidebar-action-button';
+import { ScrollableContainer } from '@/components/common/scrollable-container';
 import { useAppEvent, APP_EVENTS } from '@/lib/app-events';
 import { SpaceSwitcherMenu } from '@/features/sidebar/components/space-switcher-menu';
 import { CreateSpaceModal } from '@/features/sidebar/components/create-space-modal';
@@ -45,6 +47,7 @@ const Sidebar = memo(function Sidebar({ side = 'left' }: SidebarProps) {
     getNodePath,
     toggleFolder,
   } = useFileSystem();
+  const dispatch = useAppDispatch();
   const selectedFileId = useSelectedFileId();
   const navigate = useNavigate();
   const lastExpandedFileId = useRef<string | null>(null);
@@ -136,14 +139,17 @@ const Sidebar = memo(function Sidebar({ side = 'left' }: SidebarProps) {
   }, [isSpaceMenuOpen, activeSpaceId]);
 
   const handleGlobalAdd = async () => {
-    const newId = await addNode(null);
-    markNodeAsRecentlyCreated(newId);
-    if (!activeSpaceId) {
+    const createdNode = await addNode(null);
+    if (!createdNode) {
       return;
     }
+
+    markNodeAsRecentlyCreated(createdNode.id);
+    dispatch(setPendingFileId(createdNode.id));
+
     navigate({
       to: '/spaces/$spaceId/files/$fileId',
-      params: { spaceId: activeSpaceId, fileId: newId },
+      params: { spaceId: createdNode.spaceId, fileId: createdNode.id },
     });
   };
 
@@ -258,7 +264,11 @@ const Sidebar = memo(function Sidebar({ side = 'left' }: SidebarProps) {
         <div className="h-1" />
       </SidebarHeader>
 
-         <SidebarContent id="sidebar-scroll-content" className="px-2 overflow-y-auto [scrollbar-gutter:stable]">
+      <ScrollableContainer
+        className="min-h-0 flex-1"
+        contentId="sidebar-scroll-content"
+        contentClassName="px-3 flex min-h-0 flex-1 flex-col gap-2 pb-4"
+      >
         {!isLoading && pinnedNodes.length > 0 && (
           <div className="mb-1">
             <SmallTextLabel>pinned</SmallTextLabel>
@@ -291,7 +301,7 @@ const Sidebar = memo(function Sidebar({ side = 'left' }: SidebarProps) {
             )}
           </SidebarMenu>
         </div>
-      </SidebarContent>
+      </ScrollableContainer>
       <SidebarFooter className="border-t border-sidebar-container-border/80 px-3 py-2.5">
         <div className="flex items-center gap-2 w-full">
           <DialogRoot className="relative flex-1">

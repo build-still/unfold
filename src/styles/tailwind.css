@@ -823,6 +823,8 @@ button:not(:disabled),
   --color-surface-deeper: var(--surface-deeper);
   --color-surface-border-hover: var(--surface-border-hover);
   --color-scrollbar-thumb: var(--scrollbar-thumb);
+  --color-scrollbar-thumb-default: var(--scrollbar-thumb-default);
+  --color-scrollbar-thumb-hover: var(--scrollbar-thumb-hover);
   --color-scrollbar: var(--scrollbar-thumb);
   --color-editor-picker-swatch-bg: var(--editor-picker-swatch-bg);
   --color-editor-picker-text-muted: var(--editor-picker-text-muted);

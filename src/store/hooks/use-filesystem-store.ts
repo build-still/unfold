@@ -47,7 +47,7 @@ export interface FileSystemState {
   addSpace: (name?: string) => Promise<string>;
   renameSpace: (id: string, name: string) => Promise<void>;
   deleteSpace: (id: string) => Promise<void>;
-  addNode: (parentId: string | null) => Promise<string>;
+  addNode: (parentId: string | null) => Promise<{ id: string; spaceId: string } | null>;
   updateNodeContent: (id: string, content: string) => Promise<void>;
   renameNode: (id: string, name: string) => Promise<void>;
   getNode: (id: string) => Node | null;
@@ -138,15 +138,21 @@ export function useFileSystemStore(): FileSystemState {
 
   const addNode = useCallback(
     async (parentId: string | null) => {
+      const targetSpaceId = activeSpaceId || spaces[0]?.id;
+
+      if (!targetSpaceId) {
+        return null;
+      }
+
       if (!activeSpaceId) {
-        return '';
+        dispatch(setActiveSpaceId(targetSpaceId));
       }
 
       const id = uuidv4();
-      const result = await addNodeMutation({ id, spaceId: activeSpaceId, parentId }).unwrap();
-      return result.id;
+      const result = await addNodeMutation({ id, spaceId: targetSpaceId, parentId }).unwrap();
+      return { id: result.id, spaceId: targetSpaceId };
     },
-    [activeSpaceId, addNodeMutation],
+    [activeSpaceId, addNodeMutation, dispatch, spaces],
   );
 
   const updateNodeContent = useCallback(
