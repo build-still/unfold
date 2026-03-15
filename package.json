@@ -80,7 +80,7 @@
     "@types/react-dom": "^19.1.6",
     "@types/tippy.js": "^6.3.0",
     "@vitejs/plugin-react": "^5.1.4",
-    "sass-embedded": "^1.93.3",
+    "sass-embedded": "^1.98.0",
     "serve": "^14.2.6",
     "typescript": "~5.9.3",
     "vite": "^7.0.4"
