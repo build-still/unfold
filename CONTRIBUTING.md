@@ -10,16 +10,19 @@
 ## Development setup
 
 1. Install dependencies:
+
 ```bash
 pnpm install
 ```
 
 2. Run the web app:
+
 ```bash
 pnpm dev
 ```
 
 3. Run the desktop app:
+
 ```bash
 pnpm dev:tauri
 ```

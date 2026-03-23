@@ -38,13 +38,11 @@ export default defineConfig({
       'error',
       {
         zones: [
-          // disables cross-feature imports:
-          // eg. src/features/discussions should not import from src/features/comments, etc.
-          // TODO -   {
-          //     target: './src/features/auth',
-          //     from: './src/features',
-          //     except: ['./auth'],
-          //   },
+          {
+            target: './src/features/sidebar',
+            from: './src/features',
+            except: ['./sidebar'],
+          },
           // enforce unidirectional codebase:
 
           // e.g. src/app can import from src/features but not the other way around

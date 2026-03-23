@@ -5,13 +5,9 @@ import { RouterProvider } from 'react-router/dom';
 import {
   default as AppRoot,
   ErrorBoundary as AppRootErrorBoundary,
-} from './routes/app/root';
+} from './routes/space/root';
 
 import { paths } from '@/config/paths';
-
-const SpaceHome = () => {
-  return <div>Home</div>;
-};
 
 const SpaceOverviewRoute = () => {
   return <div>Select a node from the space.</div>;
@@ -25,7 +21,7 @@ const NotFoundRoute = () => {
   return <div>Page not found.</div>;
 };
 
-const AppRoutesLayout = () => {
+const SpaceRouteLayout = () => {
   return <AppRoot />;
 };
 
@@ -35,18 +31,16 @@ export const createAppRouter = () =>
       element: <Outlet />,
       children: [
         {
-          path: paths.space.path,
-          element: <SpaceHome />,
-        },
-        {
-          element: <AppRoutesLayout />,
+          element: <SpaceRouteLayout />,
           ErrorBoundary: AppRootErrorBoundary,
           children: [
             {
+              // empty space
               path: paths.space.root.path,
               element: <SpaceOverviewRoute />,
             },
             {
+              // space with nodes
               path: paths.space.node.path,
               element: <SpaceNodeRoute />,
             },

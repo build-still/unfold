@@ -1,0 +1,11 @@
+[[permission]]
+identifier = "allow-nodes"
+description = "Allow IPC for the sidebar node tree (SQLite-backed)."
+commands.allow = [
+  "nodes_list",
+  "nodes_create",
+  "nodes_update",
+  "nodes_move",
+  "nodes_delete",
+  "nodes_set_pinned",
+]

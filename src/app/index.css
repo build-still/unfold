@@ -1,2 +1,2 @@
-@import url('./styles/colors.css');
-@import url('./styles/reset.css');
+@import './styles/reset.css';
+@import './styles/tailwind.css';

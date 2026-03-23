@@ -1,0 +1,5 @@
+CREATE TABLE IF NOT EXISTS spaces (
+    id TEXT PRIMARY KEY NOT NULL,
+    name TEXT NOT NULL,
+    sort_order INTEGER NOT NULL DEFAULT 0
+);

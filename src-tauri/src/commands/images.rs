@@ -1,19 +1,9 @@
-use crate::config;
 use crate::models::images::{SaveImageRequest, SavePdfRequest, UploadImageRequest, UploadImageResponse};
+use sqlx::SqlitePool;
 use std::fs;
-use std::path::PathBuf;
 use tauri::{AppHandle, Manager, command};
 use tauri_plugin_dialog::{DialogExt, FilePath};
 use uuid::Uuid;
-
-fn resolve_database_path(app: &AppHandle) -> Result<PathBuf, String> {
-    let app_data_dir = app
-        .path()
-        .app_local_data_dir()
-        .map_err(|e| format!("Failed to get app data directory: {}", e))?;
-
-    Ok(config::database_path(&app_data_dir))
-}
 
 /** Uploads an image file to the app's local data directory.
  *
@@ -78,41 +68,30 @@ pub async fn upload_image(
 /** Retrieves the file path of an image from the database by attachment ID. */
 #[command]
 pub async fn get_image(app: AppHandle, attachment_id: String) -> Result<String, String> {
-    let db_path = resolve_database_path(&app)?;
-
-    let conn = rusqlite::Connection::open(&db_path)
-        .map_err(|e| format!("Failed to open database: {}", e))?;
-
-    let mut stmt = conn
-        .prepare("SELECT file_path FROM images WHERE id = ?1")
-        .map_err(|e| format!("Failed to prepare statement: {}", e))?;
-
-    let path: String = stmt
-        .query_row([&attachment_id], |row| row.get(0))
+    let pool = app.state::<SqlitePool>().inner().clone();
+    let path: String = sqlx::query_scalar("SELECT file_path FROM images WHERE id = ?1")
+        .bind(&attachment_id)
+        .fetch_one(&pool)
+        .await
         .map_err(|e| format!("Failed to get image: {}", e))?;
-
     Ok(path)
 }
 
 /** Deletes an image from both the database and the file system. */
 #[command]
 pub async fn delete_image(app: AppHandle, attachment_id: String) -> Result<(), String> {
-    let db_path = resolve_database_path(&app)?;
+    let pool = app.state::<SqlitePool>().inner().clone();
 
-    let conn = rusqlite::Connection::open(&db_path)
-        .map_err(|e| format!("Failed to open database: {}", e))?;
-
-    // Get file path before deleting from DB
-    let mut stmt = conn
-        .prepare("SELECT file_path FROM images WHERE id = ?1")
-        .map_err(|e| format!("Failed to prepare statement: {}", e))?;
-
-    let path: String = stmt
-        .query_row([&attachment_id], |row| row.get(0))
+    let path: String = sqlx::query_scalar("SELECT file_path FROM images WHERE id = ?1")
+        .bind(&attachment_id)
+        .fetch_one(&pool)
+        .await
         .map_err(|e| format!("Failed to get image: {}", e))?;
 
-    // Delete from database
-    conn.execute("DELETE FROM images WHERE id = ?1", [&attachment_id])
+    sqlx::query("DELETE FROM images WHERE id = ?1")
+        .bind(&attachment_id)
+        .execute(&pool)
+        .await
         .map_err(|e| format!("Failed to delete from database: {}", e))?;
 
     // Delete physical file
@@ -131,23 +110,20 @@ async fn store_image_metadata(
     size: u64,
     mime_type: &str,
 ) -> Result<(), String> {
-    let db_path = resolve_database_path(app)?;
+    let pool = app.state::<SqlitePool>().inner().clone();
 
-    let conn = rusqlite::Connection::open(&db_path)
-        .map_err(|e| format!("Failed to open database: {}", e))?;
-
-    conn.execute(
+    sqlx::query(
         "INSERT INTO images (id, note_id, filename, file_path, size, mime_type, created_at) 
          VALUES (?1, ?2, ?3, ?4, ?5, ?6, datetime('now'))",
-        rusqlite::params![
-            id,
-            note_id,
-            filename,
-            file_path,
-            size.to_string(),
-            mime_type
-        ],
     )
+    .bind(id)
+    .bind(note_id)
+    .bind(filename)
+    .bind(file_path)
+    .bind(size.to_string())
+    .bind(mime_type)
+    .execute(&pool)
+    .await
     .map_err(|e| format!("Failed to insert image metadata: {}", e))?;
 
     Ok(())

@@ -2,7 +2,7 @@ use tauri::Manager;
 
 mod commands;
 mod config;
-mod migrations;
+mod db;
 mod models;
 mod utils;
 
@@ -18,29 +18,34 @@ fn main() {
         .plugin(tauri_plugin_store::Builder::default().build())
         .plugin(tauri_plugin_opener::init())
         .setup(|app| {
-            let migrations = migrations::get_migrations();
             let app_data_dir = app
                 .path()
                 .app_data_dir()
                 .expect("failed to get app data dir");
 
-            // Create app data dir if it doesn't exist
             std::fs::create_dir_all(&app_data_dir).ok();
 
             let db_path = config::database_path(&app_data_dir);
             let db_url = config::database_url(&app_data_dir);
 
-            // Log the database path
             eprintln!("Using database: {}", db_url);
             println!("Database path: {}", db_path.display());
 
-            let plugin = tauri_plugin_sql::Builder::default()
-                .add_migrations(&db_url, migrations)
-                .build();
+            let pool = tauri::async_runtime::block_on(async {
+                let pool = db::create_pool(app.handle()).await?;
+                sqlx::migrate!("./migrations")
+                    .run(&pool)
+                    .await
+                    .map_err(|e| e.to_string())?;
+                db::ensure_nodes_schema(&pool).await?;
+                Ok::<_, String>(pool)
+            })?;
 
+            app.manage(pool);
+
+            let plugin = tauri_plugin_sql::Builder::default().build();
             app.handle().plugin(plugin)?;
 
-            // Grab both windows before moving them into the background thread.
             let main_window = app
                 .get_webview_window("main")
                 .expect("no main window");
@@ -62,6 +67,12 @@ fn main() {
             commands::fetch_website_html,
             commands::open_external_url,
             commands::get_system_fonts,
+            commands::nodes_list,
+            commands::nodes_create,
+            commands::nodes_update,
+            commands::nodes_move,
+            commands::nodes_delete,
+            commands::nodes_set_pinned,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

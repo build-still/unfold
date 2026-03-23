@@ -1,9 +1,7 @@
 export const paths = {
   space: {
-    path: '/',
-    getHref: () => '/',
     root: {
-      path: '/space/:spaceId',
+      path: '/',
       getHref: (spaceId: string) => `/space/${spaceId}`,
     },
     node: {
