@@ -1,7 +1,12 @@
-import { SidebarInset, SidebarProvider, SidebarTrigger } from '../ui/sidebar';
+import * as React from 'react';
 
+import {
+  SidebarInset,
+  SidebarProvider,
+  SidebarTrigger,
+} from '@/components/ui/sidebar';
 import { AppLevelLayout } from '@/config/app-level';
-import { SpaceSidebar } from '@/features/sidebar/space-sidebar';
+import { SpaceSidebar } from '@/features/sidebar/components/space-sidebar';
 import { useFullscreen } from '@/hooks/use-fullscreen';
 
 export function SpaceLayout({ children }: { children: React.ReactNode }) {

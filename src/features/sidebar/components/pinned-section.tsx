@@ -1,7 +1,7 @@
 import { useDroppable } from '@dnd-kit/core';
 import { useDraggable } from '@dnd-kit/core';
-import { CSS } from '@dnd-kit/utilities';
 
+import { useSidebarStore } from '../stores/sidebar-store';
 import { DND_DROP_PINNED, dragSourceId } from '../utils/dnd-ids';
 
 import type { FlatNodeDto } from '@/api/nodes';
@@ -15,26 +15,19 @@ import {
 
 type PinnedSectionProps = {
   nodes: FlatNodeDto[];
-  selectedIds: ReadonlySet<string>;
-  onRowClick: (event: React.MouseEvent, nodeId: string) => void;
 };
 
-function PinnedRow({
-  node,
-  isSelected,
-  onRowClick,
-}: {
-  node: FlatNodeDto;
-  isSelected: boolean;
-  onRowClick: (e: React.MouseEvent, id: string) => void;
-}) {
+function PinnedRow({ node }: { node: FlatNodeDto }) {
+  const isSelected = useSidebarStore((s) => s.selectedIds.has(node.id));
+  const selectNode = useSidebarStore((s) => s.selectNode);
+
   const dragId = dragSourceId(node.id);
-  const { attributes, listeners, setNodeRef, transform, isDragging } =
-    useDraggable({ id: dragId });
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+    id: dragId,
+  });
 
   const style = {
-    transform: CSS.Translate.toString(transform),
-    opacity: isDragging ? 0.5 : undefined,
+    opacity: isDragging ? 0 : undefined,
   };
 
   return (
@@ -45,7 +38,7 @@ function PinnedRow({
           variant="default"
           size="sm"
           className="cursor-pointer"
-          onClick={(e) => onRowClick(e, node.id)}
+          onClick={(e) => selectNode(e, node.id)}
         >
           <span className="truncate text-xs">{node.name}</span>
         </SidebarMenuButton>
@@ -54,11 +47,7 @@ function PinnedRow({
   );
 }
 
-export function PinnedSection({
-  nodes,
-  selectedIds,
-  onRowClick,
-}: PinnedSectionProps) {
+export function PinnedSection({ nodes }: PinnedSectionProps) {
   const { setNodeRef, isOver } = useDroppable({ id: DND_DROP_PINNED });
 
   return (
@@ -72,17 +61,10 @@ export function PinnedSection({
         >
           {nodes.length === 0 ? (
             <p className="text-muted-foreground text-tiny px-2.5 py-1">
-              Drop notes here to pin
+              drop notes here to pin
             </p>
           ) : (
-            nodes.map((node) => (
-              <PinnedRow
-                key={node.id}
-                node={node}
-                isSelected={selectedIds.has(node.id)}
-                onRowClick={onRowClick}
-              />
-            ))
+            nodes.map((node) => <PinnedRow key={node.id} node={node} />)
           )}
         </SidebarMenu>
       </SidebarGroupContent>

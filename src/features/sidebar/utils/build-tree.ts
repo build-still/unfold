@@ -18,7 +18,7 @@ function sortByOrder(a: FlatNodeDto, b: FlatNodeDto): number {
  * shortcut list; it does not replace the hierarchy.
  */
 export function buildNotesTree(flat: FlatNodeDto[]): TreeNode[] {
-  const byId = new Map(flat.map((r) => [r.id, r]));
+  const byId = new Map(flat.map((r) => [r.id, r])); // TODO: break this down too?
   const children = new Map<string | null, FlatNodeDto[]>();
 
   for (const row of flat) {
@@ -35,6 +35,7 @@ export function buildNotesTree(flat: FlatNodeDto[]): TreeNode[] {
     list.sort(sortByOrder);
   }
 
+  // TODO: why function inside this?
   function toTree(row: FlatNodeDto): TreeNode {
     const ch = children.get(row.id) ?? [];
     return {

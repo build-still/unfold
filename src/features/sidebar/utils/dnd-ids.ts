@@ -17,3 +17,12 @@ export function parseDragSourceId(
   if (!s.startsWith('drag-node:')) return null;
   return s.slice('drag-node:'.length);
 }
+
+export function orderedDragIds(
+  activeId: string,
+  selectedIds: ReadonlySet<string>,
+  order: string[],
+): string[] {
+  const set = selectedIds.has(activeId) ? selectedIds : new Set([activeId]);
+  return order.filter((id) => set.has(id));
+}

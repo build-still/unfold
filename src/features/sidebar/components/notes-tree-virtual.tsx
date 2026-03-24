@@ -1,15 +1,18 @@
 import { useDraggable, useDroppable } from '@dnd-kit/core';
-import { CSS } from '@dnd-kit/utilities';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { ChevronDown, Plus } from 'lucide-react';
 import * as React from 'react';
 
+import { useSidebarStore } from '../stores/sidebar-store';
 import {
   DND_DROP_NOTES_ROOT,
   dragSourceId,
   dropTargetNodeId,
 } from '../utils/dnd-ids';
-import type { FlatVisibleRow } from '../utils/flatten-visible-tree';
+import type {
+  FlatVisibleRow,
+  FlatVisibleRowKind,
+} from '../utils/flatten-visible-tree';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -28,11 +31,6 @@ import { cn } from '@/utils/tailwind';
 type NotesTreeVirtualProps = {
   parentRef: React.RefObject<HTMLDivElement | null>;
   flatRows: FlatVisibleRow[];
-  expandedIds: ReadonlySet<string>;
-  selectedIds: ReadonlySet<string>;
-  onToggleExpand: (id: string, open: boolean) => void;
-  onSelect: (event: React.MouseEvent, nodeId: string) => void;
-  onAddChild: (nodeId: string) => void;
 };
 
 function EmptyPlaceholderRow({
@@ -50,8 +48,8 @@ function EmptyPlaceholderRow({
         <div
           className="border-sidebar-border pointer-events-none absolute"
           style={{
-            top: isFirstChild ? '-4px' : '-4px',
-            bottom: isLastChild ? '4px' : '-4px',
+            top: isFirstChild ? '3px' : '-4px',
+            bottom: isLastChild ? '-4px' : '-4px',
             left: `calc((${depth} - 1) * var(--spacing-space-sidebar-indent) + .9rem)`,
             borderLeftWidth: '1.5px',
             borderLeftStyle: 'solid',
@@ -74,23 +72,19 @@ function EmptyPlaceholderRow({
 
 function NodeVirtualRow({
   row,
-  isExpanded,
-  isSelected,
-  onToggleExpand,
-  onSelect,
-  onAddChild,
   isFirstChild,
   isLastChild,
 }: {
-  row: Extract<FlatVisibleRow, { kind: 'node' }>;
-  isExpanded: boolean;
-  isSelected: boolean;
-  onToggleExpand: (id: string, open: boolean) => void;
-  onSelect: (event: React.MouseEvent, nodeId: string) => void;
-  onAddChild: (nodeId: string) => void;
+  row: Extract<FlatVisibleRow, { kind: FlatVisibleRowKind.node }>;
   isFirstChild: boolean;
   isLastChild: boolean;
 }) {
+  const isExpanded = useSidebarStore((s) => s.expandedIds.has(row.id));
+  const isSelected = useSidebarStore((s) => s.selectedIds.has(row.id));
+  const toggleExpand = useSidebarStore((s) => s.toggleExpand);
+  const selectNode = useSidebarStore((s) => s.selectNode);
+  const onAddChild = useSidebarStore((s) => s.onAddChild);
+
   const {
     attributes,
     listeners,
@@ -117,8 +111,8 @@ function NodeVirtualRow({
         <div
           className="border-sidebar-border pointer-events-none absolute"
           style={{
-            top: isFirstChild ? '6px' : '-4px',
-            bottom: isLastChild ? '4px' : '-4px',
+            top: isFirstChild ? '1.5px' : '-4px',
+            bottom: isLastChild ? '-1.5px' : '-4px',
             left: `calc((${row.depth} - 1) * var(--spacing-space-sidebar-indent) + .9rem)`,
             borderLeftWidth: '1.5px',
             borderLeftStyle: 'solid',
@@ -129,8 +123,10 @@ function NodeVirtualRow({
       <div
         ref={setRef}
         style={{
-          transform: CSS.Translate.toString(transform),
-          opacity: isDragging ? 0.45 : undefined,
+          transform: transform
+            ? `translate3d(0, ${transform.y}px, 0)`
+            : undefined,
+          opacity: isDragging ? 0 : undefined,
           paddingLeft: `calc(${row.depth} * var(--spacing-space-sidebar-indent) + 0.1rem)`,
         }}
         {...listeners}
@@ -143,10 +139,9 @@ function NodeVirtualRow({
           className={cn(
             'cursor-pointer pr-14',
             'group-hover/menu-item:bg-sidebar-accent group-hover/menu-item:text-sidebar-accent-foreground',
-            'data-active:ring-sidebar-border data-active:ring-1',
             isOver && 'ring-sidebar-ring ring-1',
           )}
-          onClick={(e) => onSelect(e, row.id)}
+          onClick={(e) => selectNode(e, row.id)}
         >
           <span className="truncate text-xs">{row.title}</span>
         </SidebarMenuButton>
@@ -162,7 +157,7 @@ function NodeVirtualRow({
                 onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
-                  onAddChild(row.id);
+                  void onAddChild?.(row.id);
                 }}
               >
                 <Plus size={11} strokeWidth={3} />
@@ -182,7 +177,7 @@ function NodeVirtualRow({
                 onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
-                  onToggleExpand(row.id, !isExpanded);
+                  toggleExpand(row.id, !isExpanded);
                 }}
               >
                 <ChevronDown
@@ -207,20 +202,10 @@ function NodeVirtualRow({
 
 function VirtualRow({
   row,
-  expandedIds,
-  selectedIds,
-  onToggleExpand,
-  onSelect,
-  onAddChild,
   isFirstChild,
   isLastChild,
 }: {
   row: FlatVisibleRow;
-  expandedIds: ReadonlySet<string>;
-  selectedIds: ReadonlySet<string>;
-  onToggleExpand: (id: string, open: boolean) => void;
-  onSelect: (event: React.MouseEvent, nodeId: string) => void;
-  onAddChild: (nodeId: string) => void;
   isFirstChild: boolean;
   isLastChild: boolean;
 }) {
@@ -237,11 +222,6 @@ function VirtualRow({
   return (
     <NodeVirtualRow
       row={row}
-      isExpanded={expandedIds.has(row.id)}
-      isSelected={selectedIds.has(row.id)}
-      onToggleExpand={onToggleExpand}
-      onSelect={onSelect}
-      onAddChild={onAddChild}
       isFirstChild={isFirstChild}
       isLastChild={isLastChild}
     />
@@ -251,11 +231,6 @@ function VirtualRow({
 export function NotesTreeVirtual({
   parentRef,
   flatRows,
-  expandedIds,
-  selectedIds,
-  onToggleExpand,
-  onSelect,
-  onAddChild,
 }: NotesTreeVirtualProps) {
   const virtualizer = useVirtualizer({
     count: flatRows.length,
@@ -264,13 +239,20 @@ export function NotesTreeVirtual({
     overscan: 8,
   });
 
-  const { setNodeRef: setNotesRootDropRef } = useDroppable({
-    id: DND_DROP_NOTES_ROOT,
-  });
+  const { setNodeRef: setNotesRootDropRef, isOver: isOverNotesRoot } =
+    useDroppable({
+      id: DND_DROP_NOTES_ROOT,
+    });
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-2">
-      <SidebarGroupLabel ref={setNotesRootDropRef}>notes</SidebarGroupLabel>
+    <div
+      ref={setNotesRootDropRef}
+      className={cn(
+        'flex min-h-0 flex-1 flex-col gap-2 rounded-lg border border-transparent transition-colors',
+        isOverNotesRoot && 'border-sidebar-ring bg-sidebar-accent/20',
+      )}
+    >
+      <SidebarGroupLabel>notes</SidebarGroupLabel>
 
       <div
         ref={parentRef}
@@ -304,11 +286,6 @@ export function NotesTreeVirtual({
                 <div key={row.id} className="w-full">
                   <VirtualRow
                     row={row}
-                    expandedIds={expandedIds}
-                    selectedIds={selectedIds}
-                    onToggleExpand={onToggleExpand}
-                    onSelect={onSelect}
-                    onAddChild={onAddChild}
                     isFirstChild={isFirstChild}
                     isLastChild={isLastChild}
                   />

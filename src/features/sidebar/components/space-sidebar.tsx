@@ -6,28 +6,33 @@ import {
   useSensors,
   type DragEndEvent,
   type DragStartEvent,
+  type Modifier,
 } from '@dnd-kit/core';
 import { useQueryClient } from '@tanstack/react-query';
 import * as React from 'react';
 
-import { nodeQueryKeys } from './api/query-keys';
+import { nodeQueryKeys } from '../api/query-keys';
 import {
   useCreateNodeMutation,
   useMoveNodesMutation,
   useNodesQuery,
   useSetPinnedMutation,
-} from './api/use-nodes';
-import { NotesTreeVirtual } from './components/notes-tree-virtual';
-import { PinnedSection } from './components/pinned-section';
-import { useTreeState } from './hooks/use-tree-state';
-import { useTreeUndo, useUndoKeyboard } from './hooks/use-tree-undo';
-import type { TreeNode } from './types/tree-node';
-import { buildNotesTree, listPinnedNodes } from './utils/build-tree';
+} from '../api/use-nodes';
+import { useTreeDerived } from '../hooks/use-tree-state';
+import { useTreeUndo, useUndoKeyboard } from '../hooks/use-tree-undo';
+import { useSidebarStore } from '../stores/sidebar-store';
+import type { TreeNode } from '../types/tree-node';
+import { buildNotesTree, listPinnedNodes } from '../utils/build-tree';
 import {
   DND_DROP_NOTES_ROOT,
   DND_DROP_PINNED,
+  orderedDragIds,
   parseDragSourceId,
-} from './utils/dnd-ids';
+} from '../utils/dnd-ids';
+import { FlatVisibleRowKind } from '../utils/flatten-visible-tree';
+
+import { NotesTreeVirtual } from './notes-tree-virtual';
+import { PinnedSection } from './pinned-section';
 
 import { nodesDelete, nodesMove, nodesSetPinned } from '@/api/nodes';
 import type { FlatNodeDto } from '@/api/nodes';
@@ -35,18 +40,26 @@ import { Sidebar, SidebarContent, SidebarGroup } from '@/components/ui/sidebar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { DEFAULT_SPACE_ID } from '@/config/spaces';
 
+// Shifts the drag overlay so its top-left corner starts exactly at the cursor.
+const snapToCursor: Modifier = ({
+  activatorEvent,
+  draggingNodeRect,
+  transform,
+}) => {
+  if (draggingNodeRect && activatorEvent && 'clientX' in activatorEvent) {
+    const evt = activatorEvent as PointerEvent;
+    return {
+      ...transform,
+      x: transform.x + evt.clientX - draggingNodeRect.left,
+      y: transform.y + evt.clientY - draggingNodeRect.top,
+    };
+  }
+  return transform;
+};
+
 type SpaceSidebarProps = React.ComponentProps<typeof Sidebar> & {
   spaceId?: string;
 };
-
-function orderedDragIds(
-  activeId: string,
-  selectedIds: ReadonlySet<string>,
-  order: string[],
-): string[] {
-  const set = selectedIds.has(activeId) ? selectedIds : new Set([activeId]);
-  return order.filter((id) => set.has(id));
-}
 
 export function SpaceSidebar({
   spaceId = DEFAULT_SPACE_ID,
@@ -59,6 +72,7 @@ export function SpaceSidebar({
     isError,
     error: loadError,
   } = useNodesQuery(spaceId);
+
   const createMut = useCreateNodeMutation();
   const moveMut = useMoveNodesMutation();
   const pinMut = useSetPinnedMutation();
@@ -78,35 +92,31 @@ export function SpaceSidebar({
     [pinnedFlat],
   );
 
-  const {
-    expandedIds,
-    selectedIds,
-    flatVisibleRows,
-    onSelect,
-    toggleExpand,
-    clearSelection,
-  } = useTreeState({ treeRoots });
+  const { flatVisibleRows } = useTreeDerived(treeRoots);
+
+  // Read UI state from store
+  const selectedIds = useSidebarStore((s) => s.selectedIds);
+  const toggleExpand = useSidebarStore((s) => s.toggleExpand);
+  const clearSelection = useSidebarStore((s) => s.clearSelection);
+  const setOnAddChild = useSidebarStore((s) => s.setOnAddChild);
 
   const { pushUndo, undo } = useTreeUndo();
   const shellRef = React.useRef<HTMLDivElement>(null);
   const [dragOverlayCount, setDragOverlayCount] = React.useState(1);
+  const scrollRef = React.useRef<HTMLDivElement>(null);
 
   useUndoKeyboard(shellRef, () => {
     void undo();
   });
 
-  const scrollRef = React.useRef<HTMLDivElement>(null);
-
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
   );
 
-  const noteRowIds = React.useMemo(
-    () => flatVisibleRows.filter((r) => r.kind === 'node').map((r) => r.id),
-    [flatVisibleRows],
-  );
-
   const fullOrder = React.useMemo(() => {
+    const noteRowIds = flatVisibleRows
+      .filter((r) => r.kind === FlatVisibleRowKind.node)
+      .map((r) => r.id);
     const merged = [...pinnedIdsOrdered, ...noteRowIds];
     const seen = new Set<string>();
     return merged.filter((id) => {
@@ -114,7 +124,7 @@ export function SpaceSidebar({
       seen.add(id);
       return true;
     });
-  }, [pinnedIdsOrdered, noteRowIds]);
+  }, [pinnedIdsOrdered, flatVisibleRows]);
 
   const snapshotRows = React.useCallback(() => {
     return qc.getQueryData<FlatNodeDto[]>(nodeQueryKeys.space(spaceId));
@@ -123,11 +133,7 @@ export function SpaceSidebar({
   const handleDragStart = React.useCallback(
     (event: DragStartEvent) => {
       const id = parseDragSourceId(event.active.id);
-      if (id && selectedIds.has(id)) {
-        setDragOverlayCount(selectedIds.size);
-      } else {
-        setDragOverlayCount(1);
-      }
+      setDragOverlayCount(id && selectedIds.has(id) ? selectedIds.size : 1);
     },
     [selectedIds],
   );
@@ -143,7 +149,6 @@ export function SpaceSidebar({
       if (moving.length === 0) return;
 
       const before = snapshotRows();
-
       const overId = String(over.id);
 
       try {
@@ -154,11 +159,7 @@ export function SpaceSidebar({
             isPinned: true,
           });
           pushUndo(async () => {
-            await nodesSetPinned({
-              spaceId,
-              nodeIds: moving,
-              isPinned: false,
-            });
+            await nodesSetPinned({ spaceId, nodeIds: moving, isPinned: false });
             await qc.invalidateQueries({
               queryKey: nodeQueryKeys.space(spaceId),
             });
@@ -267,11 +268,7 @@ export function SpaceSidebar({
     async (parentId: string) => {
       const before = snapshotRows();
       try {
-        await createMut.mutateAsync({
-          spaceId,
-          parentId,
-          name: 'new page',
-        });
+        await createMut.mutateAsync({ spaceId, parentId, name: 'new page' });
         if (before) {
           pushUndo(async () => {
             const created = qc.getQueryData<FlatNodeDto[]>(
@@ -296,11 +293,17 @@ export function SpaceSidebar({
     [createMut, pushUndo, qc, snapshotRows, spaceId, toggleExpand],
   );
 
+  // Inject onAddChild into the store so deep components can call it without prop drilling
+  React.useEffect(() => {
+    setOnAddChild(onAddChild);
+  }, [onAddChild, setOnAddChild]);
+
   const topOffset = 'var(--spacing-space-sidebar-top)';
 
   return (
     <DndContext
       sensors={sensors}
+      modifiers={[snapToCursor]}
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
     >
@@ -336,21 +339,12 @@ export function SpaceSidebar({
             {!isLoading && !isError ? (
               <>
                 <SidebarGroup className="flex flex-col gap-1">
-                  <PinnedSection
-                    nodes={pinnedFlat}
-                    selectedIds={selectedIds}
-                    onRowClick={onSelect}
-                  />
+                  <PinnedSection nodes={pinnedFlat} />
                 </SidebarGroup>
-                <SidebarGroup className="flex min-h-0 flex-1 flex-col gap-0">
+                <SidebarGroup className="flex min-h-0 flex-1 flex-col">
                   <NotesTreeVirtual
                     parentRef={scrollRef}
                     flatRows={flatVisibleRows}
-                    expandedIds={expandedIds}
-                    selectedIds={selectedIds}
-                    onToggleExpand={toggleExpand}
-                    onSelect={onSelect}
-                    onAddChild={onAddChild}
                   />
                 </SidebarGroup>
               </>

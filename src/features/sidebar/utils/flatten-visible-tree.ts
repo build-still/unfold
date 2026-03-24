@@ -1,16 +1,21 @@
 import type { TreeNode } from '../types/tree-node';
 
+export enum FlatVisibleRowKind {
+  node = 'node',
+  empty = 'empty',
+}
+
 /** One visible row in the virtual notes list (real node or empty-state under an expanded leaf). */
 export type FlatVisibleRow =
   | {
-      kind: 'node';
+      kind: FlatVisibleRowKind.node;
       id: string;
       title: string;
       depth: number;
       hasChildren: boolean;
     }
   | {
-      kind: 'empty';
+      kind: FlatVisibleRowKind.empty;
       id: string;
       depth: number;
       parentId: string;
@@ -28,7 +33,7 @@ export function flattenVisibleTree(
       const expanded = expandedIds.has(n.id);
 
       out.push({
-        kind: 'node',
+        kind: FlatVisibleRowKind.node,
         id: n.id,
         title: n.title,
         depth,
@@ -39,7 +44,7 @@ export function flattenVisibleTree(
         walk(n.children, depth + 1);
       } else if (!hasChildren && expanded) {
         out.push({
-          kind: 'empty',
+          kind: FlatVisibleRowKind.empty,
           id: `${n.id}::__empty`,
           parentId: n.id,
           depth: depth + 1,
