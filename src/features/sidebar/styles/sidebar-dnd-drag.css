@@ -1,0 +1,20 @@
+/*
+  While dragging, the mouse button stays down so :active applies to rows under
+  the cursor; :hover and group-hover also fire. Reset those to the rest color
+  so only the drop-target ring reads — keep data-active (selected) styling.
+*/
+@layer components {
+  [data-sidebar-dnd-dragging='true']
+    [data-sidebar='menu-button']:hover:not([data-active='true']),
+  [data-sidebar-dnd-dragging='true']
+    [data-sidebar='menu-button']:active:not([data-active='true']),
+  [data-sidebar-dnd-dragging='true']
+    .group\/menu-item:hover
+    [data-sidebar='menu-button']:not([data-active='true']),
+  [data-sidebar-dnd-dragging='true']
+    .group\/menu-item:active
+    [data-sidebar='menu-button']:not([data-active='true']) {
+    background-color: var(--sidebar) !important;
+    color: var(--sidebar-foreground) !important;
+  }
+}

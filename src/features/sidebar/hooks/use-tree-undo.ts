@@ -1,41 +1,8 @@
-import { useCallback, useEffect, useMemo, useRef, type RefObject } from 'react';
+import { useEffect, type RefObject } from 'react';
 
-import { createUndoStack } from '../stores/undo-stack';
-
-const DEFAULT_MAX = 50;
-
-export function useTreeUndo(options?: { maxDepth?: number }) {
-  const maxDepth = options?.maxDepth ?? DEFAULT_MAX;
-  const stackRef = useRef<ReturnType<typeof createUndoStack> | null>(null);
-  if (!stackRef.current) {
-    stackRef.current = createUndoStack(maxDepth);
-  }
-
-  const pushUndo = useCallback((fn: () => Promise<void>) => {
-    stackRef.current?.push(fn);
-  }, []);
-
-  const undo = useCallback(async () => {
-    await stackRef.current?.pop();
-  }, []);
-
-  const clearUndo = useCallback(() => {
-    stackRef.current?.clear();
-  }, []);
-
-  const stackApi = useMemo(
-    () => ({ pushUndo, undo, clearUndo }),
-    [pushUndo, undo, clearUndo],
-  );
-
-  return stackApi;
-}
-
-/** Cmd+Z / Ctrl+Z when focus is inside `containerRef` (e.g. sidebar). */
-export function useUndoKeyboard(
-  containerRef: RefObject<HTMLElement | null>,
-  onUndo: () => void | Promise<void>,
-) {
+import { undoSidebarTree } from '../stores/sidebar-tree-undo-store';
+//TODO: revisit this for event driven logic
+export function useUndoKeyboard(containerRef: RefObject<HTMLElement | null>) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const el = containerRef.current;
@@ -48,10 +15,10 @@ export function useUndoKeyboard(
 
       if ((e.metaKey || e.ctrlKey) && e.key === 'z' && !e.shiftKey) {
         e.preventDefault();
-        void onUndo();
+        void undoSidebarTree();
       }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [containerRef, onUndo]);
+  }, [containerRef]);
 }

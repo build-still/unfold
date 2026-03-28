@@ -239,7 +239,7 @@ function Sidebar({
         <div
           data-sidebar="sidebar"
           data-slot="sidebar-inner"
-          className="bg-sidebar group-data-[variant=floating]:ring-sidebar-border flex size-full flex-col group-data-[variant=floating]:rounded-4xl group-data-[variant=floating]:shadow-sm group-data-[variant=floating]:ring-1"
+          className="bg-sidebar group-data-[variant=floating]:ring-sidebar-border flex size-full flex-col group-data-[variant=floating]:overflow-hidden group-data-[variant=floating]:rounded-4xl group-data-[variant=floating]:shadow-sm group-data-[variant=floating]:ring-1"
         >
           {children}
         </div>
@@ -368,7 +368,7 @@ function SidebarContent({ className, ...props }: React.ComponentProps<'div'>) {
       data-slot="sidebar-content"
       data-sidebar="content"
       className={cn(
-        'no-scrollbar flex min-h-0 flex-1 flex-col gap-0 overflow-auto group-data-[collapsible=icon]:overflow-hidden',
+        'flex min-h-0 flex-1 flex-col gap-0 overflow-x-hidden overflow-y-hidden group-data-[collapsible=icon]:overflow-hidden',
         className,
       )}
       {...props}
@@ -465,7 +465,7 @@ const sidebarMenuButtonVariants = cva(
     variants: {
       variant: {
         default:
-          'hover:bg-sidebar-accent hover:text-sidebar-accent-foreground px-2.5 py-1',
+          'border border-transparent px-2.5 py-1 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground data-active:border-sidebar-border',
         outline:
           'px-2.5 py-1.5 border border-transparent data-active:border-sidebar-border data-active:bg-sidebar-accent text-sidebar-accent-foreground transition-colors',
       },

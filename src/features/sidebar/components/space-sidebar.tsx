@@ -1,91 +1,159 @@
 import {
+  closestCenter,
   DndContext,
   DragOverlay,
   PointerSensor,
+  pointerWithin,
+  useDndContext,
   useSensor,
   useSensors,
+  type CollisionDetection,
   type DragEndEvent,
+  type DragMoveEvent,
   type DragStartEvent,
-  type Modifier,
 } from '@dnd-kit/core';
 import { useQueryClient } from '@tanstack/react-query';
 import * as React from 'react';
 
 import { nodeQueryKeys } from '../api/query-keys';
 import {
-  useCreateNodeMutation,
   useMoveNodesMutation,
-  useNodesQuery,
+  useNodesSuspenseQuery,
   useSetPinnedMutation,
 } from '../api/use-nodes';
+import { useSidebarAddChild } from '../hooks/use-sidebar-add-child';
 import { useTreeDerived } from '../hooks/use-tree-state';
-import { useTreeUndo, useUndoKeyboard } from '../hooks/use-tree-undo';
+import { useUndoKeyboard } from '../hooks/use-tree-undo';
 import { useSidebarStore } from '../stores/sidebar-store';
+import { pushSidebarTreeUndo } from '../stores/sidebar-tree-undo-store';
 import type { TreeNode } from '../types/tree-node';
 import { buildNotesTree, listPinnedNodes } from '../utils/build-tree';
 import {
+  DND_DROP_EMPTY_PREFIX,
   DND_DROP_NOTES_ROOT,
+  DND_DROP_ON_PREFIX,
   DND_DROP_PINNED,
   orderedDragIds,
   parseDragSourceId,
-} from '../utils/dnd-ids';
+  parseDropTargetNestUnderId,
+  snapToCursor,
+} from '../utils/dnd';
 import { FlatVisibleRowKind } from '../utils/flatten-visible-tree';
+import { reparentNodesWithUndo } from '../utils/sidebar-dnd-reparent';
 
 import { NotesTreeVirtual } from './notes-tree-virtual';
 import { PinnedSection } from './pinned-section';
+import { SpaceSidebarSkeleton } from './space-sidebar-skeleton';
 
-import { nodesDelete, nodesMove, nodesSetPinned } from '@/api/nodes';
+import { nodesSetPinned } from '@/api/nodes';
 import type { FlatNodeDto } from '@/api/nodes';
 import { Sidebar, SidebarContent, SidebarGroup } from '@/components/ui/sidebar';
-import { Skeleton } from '@/components/ui/skeleton';
 import { DEFAULT_SPACE_ID } from '@/config/spaces';
-
-// Shifts the drag overlay so its top-left corner starts exactly at the cursor.
-const snapToCursor: Modifier = ({
-  activatorEvent,
-  draggingNodeRect,
-  transform,
-}) => {
-  if (draggingNodeRect && activatorEvent && 'clientX' in activatorEvent) {
-    const evt = activatorEvent as PointerEvent;
-    return {
-      ...transform,
-      x: transform.x + evt.clientX - draggingNodeRect.left,
-      y: transform.y + evt.clientY - draggingNodeRect.top,
-    };
-  }
-  return transform;
-};
 
 type SpaceSidebarProps = React.ComponentProps<typeof Sidebar> & {
   spaceId?: string;
 };
 
+type SpaceSidebarShellProps = SpaceSidebarProps & {
+  shellRef?: React.RefObject<HTMLDivElement | null>;
+  children: React.ReactNode;
+};
+
+/** Shared floating sidebar frame (border, size, spacing) for loaded and loading states. */
+function SpaceSidebarShell({
+  shellRef,
+  children,
+  ...sidebarProps
+}: SpaceSidebarShellProps) {
+  return (
+    <div ref={shellRef} className="min-w-0 shrink-0 outline-none">
+      <Sidebar
+        variant="floating"
+        collapsible="offcanvas"
+        className="w-55 justify-center align-middle"
+        style={{
+          top: 'var(--spacing-space-sidebar-top)',
+          paddingLeft: 'var(--spacing-space-sidebar-inline)',
+          height: `calc(98vh - var(--spacing-space-sidebar-top))`,
+        }}
+        {...sidebarProps}
+      >
+        <div className="h-3" />
+        {children}
+      </Sidebar>
+    </div>
+  );
+}
+
+// hover to expand parent directory
+const HOVER_EXPAND_MS = 1000;
+
+function SidebarContentWithDndDragSuppression(
+  props: React.ComponentProps<typeof SidebarContent>,
+) {
+  const { active } = useDndContext();
+  return (
+    <SidebarContent
+      data-sidebar-dnd-dragging={active ? 'true' : undefined}
+      {...props}
+    />
+  );
+}
+
+const sidebarPointerCollision: CollisionDetection = (args) => {
+  const byPointer = pointerWithin(args);
+  if (byPointer.length > 0) {
+    const onNodeRow = byPointer.filter((c) => {
+      const id = String(c.id);
+      return (
+        id.startsWith(DND_DROP_ON_PREFIX) ||
+        id.startsWith(DND_DROP_EMPTY_PREFIX)
+      );
+    });
+    if (onNodeRow.length > 0) {
+      return onNodeRow;
+    }
+    return byPointer;
+  }
+  return closestCenter(args);
+};
+
 export function SpaceSidebar({
-  spaceId = DEFAULT_SPACE_ID,
+  spaceId: spaceIdProp,
   ...props
 }: SpaceSidebarProps) {
-  const qc = useQueryClient();
-  const {
-    data: flat,
-    isLoading,
-    isError,
-    error: loadError,
-  } = useNodesQuery(spaceId);
+  const spaceId = spaceIdProp ?? DEFAULT_SPACE_ID;
+  return (
+    <React.Suspense
+      fallback={
+        <SpaceSidebarShell {...props}>
+          <SidebarContent className="min-h-0 gap-1">
+            <SpaceSidebarSkeleton />
+          </SidebarContent>
+        </SpaceSidebarShell>
+      }
+    >
+      <SpaceSidebarImpl spaceId={spaceId} {...props} />
+    </React.Suspense>
+  );
+}
 
-  const createMut = useCreateNodeMutation();
+function SpaceSidebarImpl({
+  spaceId,
+  ...props
+}: SpaceSidebarProps & { spaceId: string }) {
+  const qc = useQueryClient();
+  const { data: flat } = useNodesSuspenseQuery(spaceId);
+
   const moveMut = useMoveNodesMutation();
   const pinMut = useSetPinnedMutation();
 
   const treeRoots: TreeNode[] = React.useMemo(
-    () => (flat ? buildNotesTree(flat) : []),
+    () => buildNotesTree(flat),
     [flat],
   );
 
-  const pinnedFlat = React.useMemo(
-    () => (flat ? listPinnedNodes(flat) : []),
-    [flat],
-  );
+  const pinnedFlat = React.useMemo(() => listPinnedNodes(flat), [flat]);
 
   const pinnedIdsOrdered = React.useMemo(
     () => pinnedFlat.map((p) => p.id),
@@ -94,20 +162,26 @@ export function SpaceSidebar({
 
   const { flatVisibleRows } = useTreeDerived(treeRoots);
 
-  // Read UI state from store
   const selectedIds = useSidebarStore((s) => s.selectedIds);
   const toggleExpand = useSidebarStore((s) => s.toggleExpand);
-  const clearSelection = useSidebarStore((s) => s.clearSelection);
-  const setOnAddChild = useSidebarStore((s) => s.setOnAddChild);
 
-  const { pushUndo, undo } = useTreeUndo();
+  const onAddChild = useSidebarAddChild(spaceId);
   const shellRef = React.useRef<HTMLDivElement>(null);
   const [dragOverlayCount, setDragOverlayCount] = React.useState(1);
   const scrollRef = React.useRef<HTMLDivElement>(null);
+  const hoverExpandTimerRef = React.useRef<ReturnType<
+    typeof setTimeout
+  > | null>(null);
+  const lastHoverDropTargetIdRef = React.useRef<string | null>(null);
 
-  useUndoKeyboard(shellRef, () => {
-    void undo();
-  });
+  const clearHoverExpandTimer = React.useCallback(() => {
+    if (hoverExpandTimerRef.current) {
+      clearTimeout(hoverExpandTimerRef.current);
+      hoverExpandTimerRef.current = null;
+    }
+  }, []);
+
+  useUndoKeyboard(shellRef);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
@@ -132,14 +206,41 @@ export function SpaceSidebar({
 
   const handleDragStart = React.useCallback(
     (event: DragStartEvent) => {
+      clearHoverExpandTimer();
+      lastHoverDropTargetIdRef.current = null;
       const id = parseDragSourceId(event.active.id);
       setDragOverlayCount(id && selectedIds.has(id) ? selectedIds.size : 1);
     },
-    [selectedIds],
+    [clearHoverExpandTimer, selectedIds],
+  );
+
+  const handleDragMove = React.useCallback(
+    (event: DragMoveEvent) => {
+      const overId = event.over?.id != null ? String(event.over.id) : null;
+      const targetId = overId ? parseDropTargetNestUnderId(overId) : null;
+
+      if (targetId === lastHoverDropTargetIdRef.current) {
+        return;
+      }
+
+      clearHoverExpandTimer();
+      lastHoverDropTargetIdRef.current = targetId;
+
+      if (!targetId) return;
+
+      hoverExpandTimerRef.current = setTimeout(() => {
+        toggleExpand(targetId, true);
+        hoverExpandTimerRef.current = null;
+      }, HOVER_EXPAND_MS);
+    },
+    [clearHoverExpandTimer, toggleExpand],
   );
 
   const handleDragEnd = React.useCallback(
     async (event: DragEndEvent) => {
+      clearHoverExpandTimer();
+      lastHoverDropTargetIdRef.current = null;
+
       setDragOverlayCount(1);
       const { active, over } = event;
       const draggedId = parseDragSourceId(active.id);
@@ -158,200 +259,85 @@ export function SpaceSidebar({
             nodeIds: moving,
             isPinned: true,
           });
-          pushUndo(async () => {
+          pushSidebarTreeUndo(async () => {
             await nodesSetPinned({ spaceId, nodeIds: moving, isPinned: false });
             await qc.invalidateQueries({
               queryKey: nodeQueryKeys.space(spaceId),
             });
           });
-          clearSelection();
           return;
         }
 
         if (overId === DND_DROP_NOTES_ROOT) {
-          if (before) {
-            const prevById = new Map(before.map((n) => [n.id, n]));
-            await pinMut.mutateAsync({
-              spaceId,
-              nodeIds: moving,
-              isPinned: false,
-            });
-            await moveMut.mutateAsync({
-              spaceId,
-              nodeIds: moving,
-              newParentId: null,
-              insertBeforeId: null,
-            });
-            pushUndo(async () => {
-              for (const id of moving) {
-                const row = prevById.get(id);
-                if (!row) continue;
-                await nodesSetPinned({
-                  spaceId,
-                  nodeIds: [id],
-                  isPinned: row.isPinned,
-                });
-                await nodesMove({
-                  spaceId,
-                  nodeIds: [id],
-                  newParentId: row.parentId,
-                  insertBeforeId: null,
-                });
-              }
-              await qc.invalidateQueries({
-                queryKey: nodeQueryKeys.space(spaceId),
-              });
-            });
-          }
-          clearSelection();
+          await reparentNodesWithUndo({
+            spaceId,
+            moving,
+            newParentId: null,
+            before,
+            moveMut,
+            pinMut,
+            qc,
+          });
           return;
         }
 
-        if (overId.startsWith('drop-on:')) {
-          const targetId = overId.slice('drop-on:'.length);
-          if (moving.includes(targetId)) return;
+        const nestUnderId = parseDropTargetNestUnderId(overId);
+        if (nestUnderId) {
+          if (moving.includes(nestUnderId)) return;
 
-          if (before) {
-            const prevById = new Map(before.map((n) => [n.id, n]));
-            await pinMut.mutateAsync({
-              spaceId,
-              nodeIds: moving,
-              isPinned: false,
-            });
-            await moveMut.mutateAsync({
-              spaceId,
-              nodeIds: moving,
-              newParentId: targetId,
-              insertBeforeId: null,
-            });
-            pushUndo(async () => {
-              for (const id of moving) {
-                const row = prevById.get(id);
-                if (!row) continue;
-                await nodesSetPinned({
-                  spaceId,
-                  nodeIds: [id],
-                  isPinned: row.isPinned,
-                });
-                await nodesMove({
-                  spaceId,
-                  nodeIds: [id],
-                  newParentId: row.parentId,
-                  insertBeforeId: null,
-                });
-              }
-              await qc.invalidateQueries({
-                queryKey: nodeQueryKeys.space(spaceId),
-              });
-            });
+          const didMove = await reparentNodesWithUndo({
+            spaceId,
+            moving,
+            newParentId: nestUnderId,
+            before,
+            moveMut,
+            pinMut,
+            qc,
+          });
+          if (didMove) {
+            toggleExpand(nestUnderId, true);
           }
-          clearSelection();
         }
       } catch (e) {
         console.error(e);
       }
     },
     [
-      clearSelection,
+      clearHoverExpandTimer,
       fullOrder,
       moveMut,
       pinMut,
-      pushUndo,
       qc,
       selectedIds,
       snapshotRows,
       spaceId,
+      toggleExpand,
     ],
   );
-
-  const onAddChild = React.useCallback(
-    async (parentId: string) => {
-      const before = snapshotRows();
-      try {
-        await createMut.mutateAsync({ spaceId, parentId, name: 'new page' });
-        if (before) {
-          pushUndo(async () => {
-            const created = qc.getQueryData<FlatNodeDto[]>(
-              nodeQueryKeys.space(spaceId),
-            );
-            const newest = created?.find(
-              (n) => !before.some((b) => b.id === n.id),
-            );
-            if (newest) {
-              await nodesDelete({ spaceId, nodeIds: [newest.id] });
-              await qc.invalidateQueries({
-                queryKey: nodeQueryKeys.space(spaceId),
-              });
-            }
-          });
-        }
-        toggleExpand(parentId, true);
-      } catch (e) {
-        console.error(e);
-      }
-    },
-    [createMut, pushUndo, qc, snapshotRows, spaceId, toggleExpand],
-  );
-
-  // Inject onAddChild into the store so deep components can call it without prop drilling
-  React.useEffect(() => {
-    setOnAddChild(onAddChild);
-  }, [onAddChild, setOnAddChild]);
-
-  const topOffset = 'var(--spacing-space-sidebar-top)';
 
   return (
     <DndContext
       sensors={sensors}
+      collisionDetection={sidebarPointerCollision}
       modifiers={[snapToCursor]}
       onDragStart={handleDragStart}
+      onDragMove={handleDragMove}
       onDragEnd={handleDragEnd}
     >
-      <div ref={shellRef} className="min-w-0 shrink-0 outline-none">
-        <Sidebar
-          variant="floating"
-          collapsible="offcanvas"
-          className="w-55 justify-center align-middle"
-          style={{
-            top: topOffset,
-            paddingLeft: 'var(--spacing-space-sidebar-inline)',
-            height: `calc(98vh - ${topOffset})`,
-          }}
-          {...props}
-        >
-          <div className="h-3" />
-          <SidebarContent className="min-h-0 gap-1">
-            {isLoading ? (
-              <div className="flex flex-col gap-2 px-2">
-                <Skeleton className="h-4 w-20" />
-                <Skeleton className="h-8 w-full" />
-                <Skeleton className="h-8 w-full" />
-                <Skeleton className="h-4 w-16 pt-4" />
-                <Skeleton className="h-8 w-full" />
-              </div>
-            ) : null}
-            {isError ? (
-              <p className="text-destructive text-tiny px-2 wrap-break-word">
-                Could not load notes.
-                {loadError instanceof Error ? ` ${loadError.message}` : ''}
-              </p>
-            ) : null}
-            {!isLoading && !isError ? (
-              <>
-                <SidebarGroup className="flex flex-col gap-1">
-                  <PinnedSection nodes={pinnedFlat} />
-                </SidebarGroup>
-                <SidebarGroup className="flex min-h-0 flex-1 flex-col">
-                  <NotesTreeVirtual
-                    parentRef={scrollRef}
-                    flatRows={flatVisibleRows}
-                  />
-                </SidebarGroup>
-              </>
-            ) : null}
-          </SidebarContent>
-        </Sidebar>
-      </div>
+      <SpaceSidebarShell shellRef={shellRef} spaceId={spaceId} {...props}>
+        <SidebarContentWithDndDragSuppression className="min-h-0 gap-1">
+          <SidebarGroup className="flex flex-col gap-1">
+            <PinnedSection nodes={pinnedFlat} />
+          </SidebarGroup>
+          <SidebarGroup className="flex min-h-0 flex-1 flex-col">
+            <NotesTreeVirtual
+              parentRef={scrollRef}
+              flatRows={flatVisibleRows}
+              onAddChild={onAddChild}
+            />
+          </SidebarGroup>
+        </SidebarContentWithDndDragSuppression>
+      </SpaceSidebarShell>
       <DragOverlay dropAnimation={null}>
         <SidebarDragOverlay selectedCount={dragOverlayCount} />
       </DragOverlay>
@@ -361,8 +347,8 @@ export function SpaceSidebar({
 
 function SidebarDragOverlay({ selectedCount }: { selectedCount: number }) {
   return (
-    <div className="bg-sidebar text-sidebar-foreground border-sidebar-border text-tiny pointer-events-none rounded-lg border px-3 py-2 shadow-md">
-      {selectedCount > 1 ? `${selectedCount} notes` : 'Moving note'}
+    <div className="bg-sidebar text-sidebar-foreground border-sidebar-border text-tiny pointer-events-none cursor-default rounded-lg border px-3 py-2 shadow-md">
+      {selectedCount > 1 ? `${selectedCount} notes` : 'moving note'}
     </div>
   );
 }

@@ -3,6 +3,9 @@ export function createUndoStack(maxDepth: number) {
   const stack: (() => Promise<void>)[] = [];
 
   return {
+    get depth() {
+      return stack.length;
+    },
     push(fn: () => Promise<void>) {
       stack.push(fn);
       while (stack.length > maxDepth) {
