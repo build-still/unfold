@@ -1,6 +1,6 @@
 import { useDroppable } from '@dnd-kit/react';
 
-import { useSetPinnedMutation } from '../api/use-nodes';
+import { useSidebarUndoActions } from '../hooks/use-sidebar-undo-actions';
 import { useSidebarStore } from '../stores/sidebar-store';
 
 import { FlatNode } from '@/api/nodes';
@@ -31,7 +31,7 @@ export const PinnedSection = ({
   expandParentNodes,
 }: PinnedSectionProps) => {
   // mutations
-  const setPin = useSetPinnedMutation();
+  const { setPinnedWithUndo } = useSidebarUndoActions();
 
   // dnd root target
   const { isDropTarget, ref } = useDroppable({
@@ -78,7 +78,7 @@ export const PinnedSection = ({
                   <ContextMenuItem
                     onSelect={(event) => {
                       event.preventDefault();
-                      setPin.mutate({
+                      void setPinnedWithUndo({
                         spaceId: node.spaceId,
                         nodeIds: [node.id],
                         isPinned: false,

@@ -7,6 +7,7 @@ export type FlatNode = {
   spaceId: string;
   parentId: string | null;
   name: string;
+  content: string | null;
   sortOrder: number;
   isPinned: boolean;
 };

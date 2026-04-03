@@ -1,11 +1,7 @@
 import { useDraggable, useDroppable } from '@dnd-kit/react';
 import { ChevronRight, Plus } from 'lucide-react';
 
-import {
-  useCreateNodeMutation,
-  useDeleteNodesMutation,
-  useSetPinnedMutation,
-} from '../api/use-nodes';
+import { useSidebarUndoActions } from '../hooks/use-sidebar-undo-actions';
 import { useSidebarStore } from '../stores/sidebar-store';
 
 import { NoSubNotes } from './no-sub-notes';
@@ -52,9 +48,8 @@ export const NotesGroup = ({
   const setActiveNodeId = useSidebarStore((store) => store.setActiveNodeId);
 
   // mutations
-  const createChildMutation = useCreateNodeMutation();
-  const setPin = useSetPinnedMutation();
-  const deleteNodes = useDeleteNodesMutation();
+  const { createNodeWithUndo, deleteNodesWithUndo, setPinnedWithUndo } =
+    useSidebarUndoActions();
 
   // dnd bindings
   const { ref, handleRef, isDragging } = useDraggable({
@@ -89,7 +84,7 @@ export const NotesGroup = ({
                 event.preventDefault();
                 event.stopPropagation();
 
-                createChildMutation.mutate({
+                void createNodeWithUndo({
                   spaceId,
                   parentId: node.id,
                   name: 'new page',
@@ -162,7 +157,7 @@ export const NotesGroup = ({
             <ContextMenuItem
               onSelect={(event) => {
                 event.preventDefault();
-                setPin.mutate({
+                void setPinnedWithUndo({
                   spaceId: node.spaceId,
                   nodeIds: [node.id],
                   isPinned: !node.isPinned,
@@ -178,7 +173,7 @@ export const NotesGroup = ({
             <ContextMenuItem
               onSelect={(event) => {
                 event.preventDefault();
-                createChildMutation.mutate({
+                void createNodeWithUndo({
                   spaceId,
                   parentId: node.id,
                   name: 'new page',
@@ -199,7 +194,7 @@ export const NotesGroup = ({
               variant="destructive"
               onSelect={(event) => {
                 event.preventDefault();
-                deleteNodes.mutate({
+                void deleteNodesWithUndo({
                   spaceId: node.spaceId,
                   nodeIds: [node.id],
                 });

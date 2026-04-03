@@ -13,11 +13,8 @@ import {
   type ComponentProps,
 } from 'react';
 
-import {
-  useMoveNodesMutation,
-  useNodesSuspenseQuery,
-  useSetPinnedMutation,
-} from '../api/use-nodes';
+import { useNodesSuspenseQuery } from '../api/use-nodes';
+import { useSidebarUndoActions } from '../hooks/use-sidebar-undo-actions';
 import { useSidebarStore } from '../stores/sidebar-store';
 
 import { NotesSection } from './notes-section';
@@ -33,6 +30,7 @@ import {
   SidebarGroupLabel,
 } from '@/components/ui/sidebar';
 import { DEFAULT_SPACE_ID } from '@/config/spaces';
+import { getUndoManager } from '@/core/undo/undo-manager';
 import {
   DROPPABLE_NOTES_SECTION_ID,
   isPinnedDropTargetId,
@@ -99,8 +97,7 @@ const SpaceSidebarContent = () => {
   };
 
   // mutations
-  const moveNodes = useMoveNodesMutation();
-  const setPin = useSetPinnedMutation();
+  const { moveNodesWithUndo, setPinnedWithUndo } = useSidebarUndoActions();
 
   const clearHoverExpand = () => {
     if (hoverExpandTimeoutRef.current) {
@@ -170,11 +167,21 @@ const SpaceSidebarContent = () => {
         // already pinned, do nothing
         return;
       }
-      setPin.mutate({ spaceId, nodeIds: [sourceItemId], isPinned: true });
+
+      const sourceNode = nodes.find((node) => node.id === sourceItemId);
+      if (!sourceNode) {
+        return;
+      }
+
+      void setPinnedWithUndo({
+        spaceId,
+        nodeIds: [sourceNode.id],
+        isPinned: true,
+      });
       return;
     }
 
-    moveNodes.mutate({
+    void moveNodesWithUndo({
       spaceId: spaceId,
       nodeIds: [sourceItemId],
       newParentId:
@@ -220,25 +227,35 @@ const SpaceSidebarContent = () => {
 
 export const SpaceSidebar = () => {
   const setCurrentSpaceID = useSpaceStore((s) => s.setCurrentSpaceID);
+  const sidebarContainerRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     setCurrentSpaceID(spaceId);
   }, [setCurrentSpaceID, spaceId]);
 
+  useEffect(() => {
+    const undoManager = getUndoManager();
+    return undoManager.attachKeyboardShortcuts(
+      () => sidebarContainerRef.current,
+    );
+  }, []);
+
   return (
-    <Sidebar
-      variant="floating"
-      collapsible="offcanvas"
-      className="shadow-sidebar-shadow border-sidebar-border bg-sidebar w-50 justify-center rounded-4xl border align-middle select-none"
-      style={{
-        top: 'var(--spacing-space-sidebar-top)',
-        height: `calc(98vh - var(--spacing-space-sidebar-top))`,
-      }}
-    >
-      <div className="h-3" />
-      <Suspense fallback={<SpaceSidebarSkeleton />}>
-        <SpaceSidebarContent />
-      </Suspense>
-    </Sidebar>
+    <div ref={sidebarContainerRef} className="h-full">
+      <Sidebar
+        variant="floating"
+        collapsible="offcanvas"
+        className="shadow-sidebar-shadow border-sidebar-border bg-sidebar w-50 justify-center rounded-4xl border align-middle select-none"
+        style={{
+          top: 'var(--spacing-space-sidebar-top)',
+          height: `calc(98vh - var(--spacing-space-sidebar-top))`,
+        }}
+      >
+        <div className="h-3" />
+        <Suspense fallback={<SpaceSidebarSkeleton />}>
+          <SpaceSidebarContent />
+        </Suspense>
+      </Sidebar>
+    </div>
   );
 };

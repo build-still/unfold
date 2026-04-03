@@ -21,8 +21,9 @@ fn row_to_flat(row: &sqlx::sqlite::SqliteRow) -> Result<FlatNode, sqlx::Error> {
         space_id: row.try_get(1)?,
         parent_id: row.try_get(2)?,
         name: row.try_get(3)?,
-        sort_order: row.try_get(4)?,
-        is_pinned: row.try_get::<i64, _>(5)? != 0,
+        content: row.try_get(4)?,
+        sort_order: row.try_get(5)?,
+        is_pinned: row.try_get::<i64, _>(6)? != 0,
     })
 }
 
@@ -109,7 +110,7 @@ pub async fn nodes_list(app: AppHandle, space_id: String) -> Result<SpaceNotesRe
     let pool = pool(&app);
     seed_if_empty(&pool, &space_id).await?;
     let rows = sqlx::query(
-        "SELECT id, space_id, parent_id, name, sort_order, is_pinned
+        "SELECT id, space_id, parent_id, name, content, sort_order, is_pinned
          FROM nodes WHERE space_id = ?1
          ORDER BY parent_id, sort_order, name",
     )
@@ -166,7 +167,7 @@ pub async fn nodes_create(app: AppHandle, request: CreateNodeRequest) -> Result<
     .await
     .map_err(|e| e.to_string())?;
     let row = sqlx::query(
-        "SELECT id, space_id, parent_id, name, sort_order, is_pinned FROM nodes WHERE id = ?1",
+        "SELECT id, space_id, parent_id, name, content, sort_order, is_pinned FROM nodes WHERE id = ?1",
     )
     .bind(&id)
     .fetch_one(&pool)
@@ -191,7 +192,7 @@ pub async fn nodes_update(app: AppHandle, request: UpdateNodeRequest) -> Result<
             .map_err(|e| e.to_string())?;
     }
     let row = sqlx::query(
-        "SELECT id, space_id, parent_id, name, sort_order, is_pinned FROM nodes WHERE id = ?1",
+        "SELECT id, space_id, parent_id, name, content, sort_order, is_pinned FROM nodes WHERE id = ?1",
     )
     .bind(&request.id)
     .fetch_one(&pool)
@@ -239,7 +240,7 @@ pub async fn nodes_set_pinned(app: AppHandle, request: SetPinnedRequest) -> Resu
     }
     tx.commit().await.map_err(|e| e.to_string())?;
     let rows = sqlx::query(
-        "SELECT id, space_id, parent_id, name, sort_order, is_pinned 
+        "SELECT id, space_id, parent_id, name, content, sort_order, is_pinned 
          FROM nodes 
          WHERE space_id = ?1  AND is_pinned = 1
          ORDER BY sort_order ASC, name ASC",
@@ -414,9 +415,6 @@ pub async fn nodes_apply_space_snapshot(
     app: AppHandle,
     request: ApplySpaceSnapshotRequest,
 ) -> Result<(), String> {
-    if request.nodes.is_empty() {
-        return Ok(());
-    }
     let pool = pool(&app);
     for n in &request.nodes {
         if n.space_id != request.space_id {
@@ -430,23 +428,56 @@ pub async fn nodes_apply_space_snapshot(
         .await
         .map_err(|e| e.to_string())?;
 
+    if request.nodes.is_empty() {
+        sqlx::query("DELETE FROM nodes WHERE space_id = ?1")
+            .bind(&request.space_id)
+            .execute(&mut *tx)
+            .await
+            .map_err(|e| e.to_string())?;
+    } else {
+        let placeholders = (0..request.nodes.len())
+            .map(|_| "?")
+            .collect::<Vec<_>>()
+            .join(", ");
+
+        let query_str = format!(
+            "DELETE FROM nodes WHERE space_id = ? AND id NOT IN ({})",
+            placeholders
+        );
+
+        let mut delete_query = sqlx::query(&query_str).bind(&request.space_id);
+        for node in &request.nodes {
+            delete_query = delete_query.bind(&node.id);
+        }
+
+        delete_query
+            .execute(&mut *tx)
+            .await
+            .map_err(|e| e.to_string())?;
+    }
+
     for n in &request.nodes {
-        let rows = sqlx::query(
-            "UPDATE nodes SET parent_id = ?1, sort_order = ?2, is_pinned = ?3, name = ?4
-             WHERE id = ?5 AND space_id = ?6",
+        sqlx::query(
+            "INSERT INTO nodes (id, space_id, parent_id, name, content, is_pinned, sort_order)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)
+             ON CONFLICT(id) DO UPDATE SET
+               space_id = excluded.space_id,
+               parent_id = excluded.parent_id,
+               name = excluded.name,
+               content = excluded.content,
+               is_pinned = excluded.is_pinned,
+               sort_order = excluded.sort_order",
         )
-        .bind(&n.parent_id)
-        .bind(n.sort_order)
-        .bind(if n.is_pinned { 1 } else { 0 })
-        .bind(&n.name)
         .bind(&n.id)
         .bind(&request.space_id)
+        .bind(&n.parent_id)
+        .bind(&n.name)
+        .bind(&n.content)
+        .bind(if n.is_pinned { 1 } else { 0 })
+        .bind(n.sort_order)
         .execute(&mut *tx)
         .await
         .map_err(|e| e.to_string())?;
-        if rows.rows_affected() == 0 {
-            return Err(format!("Node {} not found for snapshot apply", n.id));
-        }
     }
 
     tx.commit().await.map_err(|e| e.to_string())?;

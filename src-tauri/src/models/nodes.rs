@@ -7,6 +7,7 @@ pub struct FlatNode {
     pub space_id: String,
     pub parent_id: Option<String>,
     pub name: String,
+    pub content: Option<String>,
     pub sort_order: i64,
     pub is_pinned: bool,
 }
