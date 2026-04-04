@@ -11,17 +11,19 @@ import {
 import {
   nodeQueryKeys,
   nodesList,
-  type CreateNodePayload,
-  type DeleteNodesPayload,
   type FlatNode,
-  type MoveNodesPayload,
-  type SetPinnedPayload,
   type SpaceNotesDto,
 } from '@/api/nodes';
 import { getUndoManager } from '@/core/undo/undo-manager';
 
 const cloneNodes = (nodes: FlatNode[]): FlatNode[] =>
   nodes.map((node) => ({ ...node }));
+
+type SpaceScopedPayload = { spaceId: string };
+
+type AsyncMutation<P, R> = {
+  mutateAsync: (payload: P) => Promise<R>;
+};
 
 const areSnapshotsEqual = (a: FlatNode[], b: FlatNode[]): boolean => {
   if (a.length !== b.length) {
@@ -106,29 +108,17 @@ export const useSidebarUndoActions = () => {
     return result;
   };
 
-  const createNodeWithUndo = async (payload: CreateNodePayload) => {
-    return runWithSnapshotUndo(payload.spaceId, () =>
-      createNodeMutation.mutateAsync(payload),
-    );
+  const withSnapshotUndo = <P extends SpaceScopedPayload, R>(
+    mutation: AsyncMutation<P, R>,
+  ) => {
+    return (payload: P): Promise<R> =>
+      runWithSnapshotUndo(payload.spaceId, () => mutation.mutateAsync(payload));
   };
 
-  const deleteNodesWithUndo = async (payload: DeleteNodesPayload) => {
-    return runWithSnapshotUndo(payload.spaceId, () =>
-      deleteNodesMutation.mutateAsync(payload),
-    );
-  };
-
-  const moveNodesWithUndo = async (payload: MoveNodesPayload) => {
-    return runWithSnapshotUndo(payload.spaceId, () =>
-      moveNodesMutation.mutateAsync(payload),
-    );
-  };
-
-  const setPinnedWithUndo = async (payload: SetPinnedPayload) => {
-    return runWithSnapshotUndo(payload.spaceId, () =>
-      setPinnedMutation.mutateAsync(payload),
-    );
-  };
+  const createNodeWithUndo = withSnapshotUndo(createNodeMutation);
+  const deleteNodesWithUndo = withSnapshotUndo(deleteNodesMutation);
+  const moveNodesWithUndo = withSnapshotUndo(moveNodesMutation);
+  const setPinnedWithUndo = withSnapshotUndo(setPinnedMutation);
 
   return {
     createNodeWithUndo,

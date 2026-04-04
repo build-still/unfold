@@ -23,8 +23,6 @@ export const useSidebarStore = create<SidebarState & SidebarActions>()(
       expandedIds: new Set(),
       selectedIds: new Set(),
       activeNodeId: null,
-      rangeAnchorId: null,
-      lastSelectedId: null,
 
       toggleExpand: (id, open) =>
         set((state) => {
@@ -35,11 +33,6 @@ export const useSidebarStore = create<SidebarState & SidebarActions>()(
       setActiveNodeId: (nodeId: string) =>
         set((state) => {
           state.activeNodeId = nodeId;
-        }),
-
-      clearSelection: () =>
-        set((state) => {
-          state.selectedIds.clear();
         }),
     })),
     {
