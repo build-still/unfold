@@ -48,7 +48,7 @@ export const PinnedSection = ({
         ref={ref}
         className={cn(
           isDropTarget
-            ? 'border-sidebar-border bg-sidebar-accent/10 border border-dashed'
+            ? 'border-muted-foreground-heavy/40 bg-sidebar-accent/10 border border-dashed'
             : 'border border-transparent',
           'overflow-hidden rounded-2xl p-1',
         )}
@@ -62,7 +62,7 @@ export const PinnedSection = ({
                     variant="outline"
                     size="sm"
                     isActive={currentlyActiveNodeId === node.id}
-                    className="w-full"
+                    className="w-full focus-visible:ring-transparent"
                     onClick={() => {
                       setActiveNodeId(node.id);
                       expandParentNodes(node.id);

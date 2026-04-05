@@ -11,11 +11,13 @@ import { cn } from '@/utils/tailwind';
 export interface NotesSectionProps {
   nodes: FlatNode[];
   expandParentNodes: (nodeId: string) => void;
+  isDraggingInNotesArea: boolean;
 }
 
 export const NotesSection = ({
   nodes,
   expandParentNodes,
+  isDraggingInNotesArea,
 }: NotesSectionProps) => {
   // hierarchy
   const parentNodesMap = groupNodesByParent(nodes);
@@ -31,13 +33,13 @@ export const NotesSection = ({
       <div
         ref={ref}
         className={cn(
-          isDropTarget
-            ? 'border-sidebar-border bg-sidebar-accent/20 border border-dashed'
+          isDropTarget || isDraggingInNotesArea
+            ? 'border-muted-foreground-heavy/40 bg-sidebar-accent/20 border border-dashed'
             : 'border border-transparent',
-          'box-border h-full min-h-0 rounded-2xl p-1',
+          'box-border h-full min-h-0 rounded-2xl p-1 outline-none',
         )}
       >
-        <div className="h-full min-h-0 overflow-x-hidden overflow-y-auto">
+        <div className="h-full min-h-0 overflow-x-hidden overflow-y-auto outline-none">
           <SidebarMenu className="w-full gap-1">
             {rootNodes.map((node) => (
               <NotesGroup

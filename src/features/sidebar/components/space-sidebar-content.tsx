@@ -54,6 +54,7 @@ export type SpaceSidebarContentProps = {
 export const SpaceSidebarContent = ({ spaceId }: SpaceSidebarContentProps) => {
   const nodes = useNodesSuspenseQuery(spaceId).data.nodes ?? [];
   const [activeDragNodeId, setActiveDragNodeId] = useState<string | null>(null);
+  const [isDraggingInNotesArea, setIsDraggingInNotesArea] = useState(false);
 
   const hoverExpandTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
     null,
@@ -83,12 +84,22 @@ export const SpaceSidebarContent = ({ spaceId }: SpaceSidebarContentProps) => {
   };
 
   const onDragStart: OnDragStart = (event) => {
-    setActiveDragNodeId(toOperationId(event.operation?.source?.id));
+    const sourceItemId = toOperationId(event.operation?.source?.id);
+    setActiveDragNodeId(sourceItemId);
+    setIsDraggingInNotesArea(
+      Boolean(sourceItemId && !isPinnedDropTargetId(sourceItemId)),
+    );
   };
 
   const onDragOver: OnDragOver = (event) => {
     const targetParentId = toOperationId(event.operation?.target?.id);
     const sourceItemId = toOperationId(event.operation?.source?.id);
+
+    if (!sourceItemId || isPinnedDropTargetId(sourceItemId)) {
+      setIsDraggingInNotesArea(false);
+    } else if (targetParentId) {
+      setIsDraggingInNotesArea(!isPinnedDropTargetId(targetParentId));
+    }
 
     if (!sourceItemId || !targetParentId) {
       clearHoverExpand();
@@ -121,7 +132,12 @@ export const SpaceSidebarContent = ({ spaceId }: SpaceSidebarContentProps) => {
 
   const onDragEnd: OnDragEnd = (event) => {
     setActiveDragNodeId(null);
+    setIsDraggingInNotesArea(false);
     clearHoverExpand();
+
+    if (event.canceled) {
+      return;
+    }
 
     const targetParentId = toOperationId(event.operation?.target?.id);
     const sourceItemId = toOperationId(event.operation?.source?.id);
@@ -170,7 +186,10 @@ export const SpaceSidebarContent = ({ spaceId }: SpaceSidebarContentProps) => {
   }, []);
 
   return (
-    <SidebarContent className="h-full min-h-0 gap-1 overflow-y-auto">
+    <SidebarContent
+      data-sidebar-dnd-dragging={activeDragNodeId ? 'true' : undefined}
+      className="h-full min-h-0 gap-1 overflow-y-auto"
+    >
       <DragDropProvider
         sensors={sidebarSensors}
         onDragStart={onDragStart}
@@ -184,9 +203,13 @@ export const SpaceSidebarContent = ({ spaceId }: SpaceSidebarContentProps) => {
             expandParentNodes={expandParentNodes}
           />
         </SidebarGroup>
-        <SidebarGroup>
+        <SidebarGroup className="h-full">
           <SidebarGroupLabel>notes</SidebarGroupLabel>
-          <NotesSection nodes={nodes} expandParentNodes={expandParentNodes} />
+          <NotesSection
+            nodes={nodes}
+            expandParentNodes={expandParentNodes}
+            isDraggingInNotesArea={isDraggingInNotesArea}
+          />
         </SidebarGroup>
         <DragOverlay>
           <SidebarDragOverlay

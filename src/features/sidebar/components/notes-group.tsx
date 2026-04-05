@@ -52,11 +52,11 @@ export const NotesGroup = ({
     useSidebarUndoActions();
 
   // dnd bindings
-  const { ref, handleRef, isDragging } = useDraggable({
+  const { ref, handleRef } = useDraggable({
     id: node.id,
     type: 'item',
   });
-  const { ref: droppableRef } = useDroppable({ id: node.id });
+  const { ref: droppableRef, isDropTarget } = useDroppable({ id: node.id });
 
   const rowContent = (
     <div
@@ -65,8 +65,10 @@ export const NotesGroup = ({
         handleRef(element);
         droppableRef(element);
       }}
-      data-sidebar-dnd-dragging={isDragging}
-      className="group/note-row flex w-full items-center gap-1"
+      className={cn(
+        'group/note-row flex w-full items-center gap-1 rounded-lg outline-none',
+        isDropTarget && 'border-muted-foreground-heavy/40 border border-dashed',
+      )}
       onClick={() => {
         setActiveNodeId(node.id);
         expandParentNodes(node.id);
@@ -147,7 +149,7 @@ export const NotesGroup = ({
               variant="outline"
               size="sm"
               isActive={isActive}
-              className="w-full"
+              className="w-full focus-visible:ring-transparent"
             >
               {rowContent}
             </SidebarMenuButton>
