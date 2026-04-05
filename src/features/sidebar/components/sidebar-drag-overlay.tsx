@@ -1,4 +1,4 @@
-import { FlatNode } from '@/api/nodes';
+import { FlatNode } from '@/features/sidebar/api/nodes';
 
 export interface SidebarDragOverlayProps {
   nodes: FlatNode[];

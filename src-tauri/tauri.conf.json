@@ -38,6 +38,7 @@
           "permissions": [
             "core:default",
             "allow-nodes",
+            "allow-config",
             "sql:default",
             "sql:allow-load",
             "sql:allow-execute",

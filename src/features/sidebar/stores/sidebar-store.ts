@@ -17,6 +17,12 @@ type SidebarActions = {
   setActiveNodeId: (nodeId: string) => void;
 };
 
+type PersistedSidebarState = {
+  expandedIds?: string[];
+  selectedIds?: string[];
+  activeNodeId?: string | null;
+};
+
 export const useSidebarStore = create<SidebarState & SidebarActions>()(
   persist(
     immer((set) => ({
@@ -46,12 +52,16 @@ export const useSidebarStore = create<SidebarState & SidebarActions>()(
       }),
 
       // deserialize back to Sets
-      merge: (persisted: any, current) => ({
-        ...current,
-        ...persisted,
-        expandedIds: new Set(persisted?.expandedIds ?? []),
-        selectedIds: new Set(persisted?.selectedIds ?? []),
-      }),
+      merge: (persisted, current) => {
+        const persistedState = (persisted ?? {}) as PersistedSidebarState;
+
+        return {
+          ...current,
+          ...persistedState,
+          expandedIds: new Set(persistedState.expandedIds ?? []),
+          selectedIds: new Set(persistedState.selectedIds ?? []),
+        };
+      },
     },
   ),
 );

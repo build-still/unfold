@@ -3,7 +3,6 @@ import { useDroppable } from '@dnd-kit/react';
 import { useSidebarUndoActions } from '../hooks/use-sidebar-undo-actions';
 import { useSidebarStore } from '../stores/sidebar-store';
 
-import { FlatNode } from '@/api/nodes';
 import {
   ContextMenu,
   ContextMenuContent,
@@ -18,6 +17,7 @@ import {
   SidebarMenuItem,
 } from '@/components/ui/sidebar';
 import { SidebarContextMenuShortcuts } from '@/config/sidebar';
+import { FlatNode } from '@/features/sidebar/api/nodes';
 import { DROPPABLE_PINNED_SECTION_ID } from '@/features/sidebar/utils/dnd';
 import { cn } from '@/utils/tailwind';
 
@@ -48,7 +48,7 @@ export const PinnedSection = ({
         ref={ref}
         className={cn(
           isDropTarget
-            ? 'border-muted-foreground-heavy/40 bg-sidebar-accent/10 border border-dashed'
+            ? 'border-muted-foreground-heavy/30 bg-sidebar-accent/10 border border-dashed'
             : 'border border-transparent',
           'overflow-hidden rounded-2xl p-1',
         )}

@@ -1,4 +1,4 @@
-import type { FlatNode } from '@/api/nodes';
+import type { FlatNode } from '@/features/sidebar/api/nodes';
 
 /**
  * Groups flat nodes by their parent id for fast hierarchical lookups.

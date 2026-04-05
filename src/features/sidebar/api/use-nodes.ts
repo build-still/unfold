@@ -17,7 +17,7 @@ import type {
   UpdateNodePayload,
   MoveNodesUnpinnedPayload,
   ApplySpaceSnapshotPayload,
-} from '@/api/nodes';
+} from './nodes';
 import {
   nodesCreate,
   nodesDelete,
@@ -29,7 +29,7 @@ import {
   nodesApplySpaceSnapshot,
   nodeQueryKeys,
   invalidateSpaceNodesQuery,
-} from '@/api/nodes';
+} from './nodes';
 
 export const emptySpaceNotes: SpaceNotesDto = { nodes: [] };
 

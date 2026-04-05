@@ -1,4 +1,3 @@
-import { useMemo } from 'react';
 import { createBrowserRouter, Outlet } from 'react-router';
 import { RouterProvider } from 'react-router/dom';
 
@@ -54,8 +53,8 @@ export const createAppRouter = () =>
     },
   ]);
 
-export const AppRouter = () => {
-  const router = useMemo(() => createAppRouter(), []);
+const appRouter = createAppRouter();
 
-  return <RouterProvider router={router} />;
+export const AppRouter = () => {
+  return <RouterProvider router={appRouter} />;
 };

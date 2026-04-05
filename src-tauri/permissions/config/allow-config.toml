@@ -1,0 +1,11 @@
+[[permission]]
+identifier = "allow-config"
+description = "Allow IPC for app settings and keybindings persistence."
+commands.allow = [
+  "get_config",
+  "set_config",
+  "reset_config",
+  "get_keybindings",
+  "set_keybindings",
+  "reset_keybindings",
+]

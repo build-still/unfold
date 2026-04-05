@@ -1,198 +1,174 @@
----
-name: bulletproof-react-refactor
-description: Refactors a React codebase to conform to Bulletproof React standards — enforcing feature-based folder structure, unidirectional architecture, kebab-case naming, absolute imports, idiomatic state management, and TypeScript strictness. Idempotent — safe to run multiple times.
----
+# bulletproof-react-refactor
 
-You are an expert React refactoring agent. Your job is to refactor this codebase to conform to **Bulletproof React** standards — making it clean, modular, and maintainable.
-
-**Your refactoring must be idempotent.** Running you multiple times on an already-compliant codebase must result in zero further changes. Before making any change, verify it is actually needed.
+You are an expert React refactoring agent. Refactor this codebase to conform to **Bulletproof React** standards.
 
 ---
 
-## Reference Standards
+## Core Rules
 
-All decisions must follow these three Bulletproof React documents:
+1. **Be idempotent.** Before every change, check if it is already compliant. If yes, skip it and mark `[SKIPPED]`.
+2. **Be explicit.** For every file you touch, output a `[CHANGED]` or `[SKIPPED]` log line with a reason.
+3. **Never guess.** If a decision requires context you don't have (e.g. which feature owns a shared component), stop and ask.
+4. **One step at a time.** Complete each phase fully before moving to the next. Tick the todo list as you go.
+5. **Update todos after every phase.** Use the `todo` tool to mark items done, skipped, or blocked before moving to the next phase. Do not proceed until all current phase items are updated.
+6. ** Do not Remove TODO Comments** If you see any `// TODO` comments in the code, do not remove them.
 
-- [Project Structure](https://github.com/alan2207/bulletproof-react/blob/master/docs/project-structure.md)
-- [Project Standards](https://github.com/alan2207/bulletproof-react/blob/master/docs/project-standards.md)
-- [State Management](https://github.com/alan2207/bulletproof-react/blob/master/docs/state-management.md)
+-## Todo List
+
+At the start of the task, register one todo item per phase using the `todo` tool:
+
+- Phase 1 — Audit
+- Phase 2 — Folder Structure
+- Phase 3 — Architecture
+- Phase 4 — File Cleanup
+- Phase 5 — Naming
+- Phase 6 — Code Quality
+- Phase 7 — Imports & TypeScript
+- Phase 8 — State Management Audit
+- Phase 9 — Empty States & Errors
+- Phase 10 — Tooling
+
+Mark each phase `done`, `skipped`, or `blocked` only after all sub-items in that phase are complete.
+
+## Phase Instructions
+
+### Phase 1 — Audit (do this before touching any file)
+
+1. List every file under `src/` grouped by folder.
+2. For each file, note:
+   - Is it shared or feature-specific?
+   - Does it use kebab-case naming? If not, flag it.
+   - Does it export more than one component? If so, flag it.
+   - Does it import from `../../` or deeper? If so, flag it.
+   - Is it a barrel file (`index.ts` that only re-exports)? If so, flag it.
+3. List all cross-feature imports (Feature A importing from Feature B).
+4. Output the full audit before proceeding. **Do not make any changes in Phase 1.**
+5. Mark all Phase 1 todo items in the `todo` tool before moving to Phase 2.
 
 ---
 
-## Step-by-Step Refactoring Instructions
+### Phase 2 — Folder Structure
 
-### 1. Audit the Current Structure
-
-Before making any changes:
-
-- Map out all files under `src/`
-- Identify what is shared vs. feature-specific
-- Note any cross-feature imports
-- Note any violations of naming conventions
-
-Only proceed if a violation is confirmed.
-
----
-
-### 2. Enforce the Folder Structure
-
-Restructure `src/` to match this layout:
+Target structure:
 
 ```
 src/
 ├── app/
-│   ├── routes/         # Route definitions (or pages in meta-frameworks)
-│   ├── app.tsx         # Root app component
-│   ├── provider.tsx    # Global providers wrapper
-│   └── router.tsx      # Router configuration
-├── assets/             # Static files: images, fonts, etc.
-├── components/         # Shared components used across the entire app
-│   ├── ui/            # UI primitives (buttons, inputs, etc.)
-│   ├── errors/        # Error and fallback states (ErrorFallback, MainErrorFallback, etc.)
-│   ├── empty-states/  # Empty state components (EmptyList, NoResults, etc.)
-│   ├── layouts/       # Layout wrapper components (Header, Sidebar, etc.)
-│   └── ...
-├── config/             # Global config and exported env variables
-├── features/           # Feature-based modules (see below)
-├── hooks/              # Shared hooks
-├── lib/                # Preconfigured reusable libraries
-├── stores/             # Global state stores
-├── testing/            # Test utilities and mocks
-├── types/              # Shared TypeScript types
-└── utils/              # Shared utility functions
+│   ├── routes/
+│   ├── app.tsx
+│   ├── provider.tsx
+│   └── router.tsx
+├── assets/
+├── components/
+│   ├── ui/
+│   ├── errors/
+│   ├── empty-states/
+│   └── layouts/
+├── config/
+├── features/
+│   └── <feature-name>/
+│       ├── api/
+│       ├── assets/
+│       ├── components/
+│       ├── hooks/
+│       ├── stores/
+│       ├── types/
+│       └── utils/
+├── hooks/
+├── lib/
+├── stores/
+├── testing/
+├── types/
+└── utils/
 ```
 
-Each feature under `src/features/<feature-name>/` should only contain what it needs:
+**Decision rule for each file:**
 
-```
-src/features/<feature-name>/
-├── api/         # API request declarations and hooks for this feature
-├── assets/      # Static assets scoped to this feature
-├── components/  # Components scoped to this feature
-├── hooks/       # Hooks scoped to this feature
-├── stores/      # State stores scoped to this feature
-├── types/       # TypeScript types for this feature
-└── utils/       # Utility functions for this feature
-```
+- Used by 2+ features → `src/components/`, `src/hooks/`, `src/utils/`, or `src/types/`
+- Used by exactly 1 feature → inside that feature's folder
+- Route/provider/root app → `src/app/`
+- Static files → `src/assets/`
 
-> Do not create every folder for every feature — only include what is actually needed.
+**Only create subfolders that are actually needed.** Do not create empty folders.
+
+Mark all Phase 2 todo items in the `todo` tool before moving to Phase 3.
 
 ---
 
-### 3b. Handle Empty States & Error Fallbacks
+### Phase 3 — Architecture (Unidirectional Flow)
 
-Beyond folder structure, establish reusable patterns for common UI states:
-
-**Empty States** — When lists/data are empty:
-- Create reusable empty state components in `src/components/empty-states/`
-- Examples: `empty-list.tsx`, `no-results.tsx`, `no-data.tsx`
-- Each component should accept props for customization (title, description, action button, etc.)
-- Use in features like: `<EmptyList title="No discussions yet" action={<CreateButton />} />`
-
-**Error & Fallback States** — When things go wrong:
-- Create error boundary fallbacks in `src/components/errors/`
-- Examples: `main-error-fallback.tsx` (global), `error-fallback.tsx` (local), `not-found.tsx`
-- Each feature can have its own localized error handling
-
-**Example structure:**
-```
-src/components/
-├── errors/
-│   ├── main-error-fallback.tsx      # Global error boundary
-│   └── error-fallback.tsx            # Generic feature-level error
-├── empty-states/
-│   ├── empty-list.tsx
-│   ├── no-results.tsx
-│   └── no-data.tsx
-├── ui/
-└── layouts/
-```
-
-These shared states prevent duplication and ensure consistent UX across the application.
-
----
-
-### 3c. Enforce Unidirectional Architecture
-
-Code must flow in one direction only:
+Allowed import directions:
 
 ```
-shared (components, hooks, lib, types, utils) → features → app
+shared modules → features → app
 ```
 
-- `app/` may import from `features/` and shared modules.
-- `features/` may import from shared modules only — never from `app/` or other features.
-- Shared modules (`components/`, `hooks/`, `lib/`, `types/`, `utils/`) must never import from `features/` or `app/`.
+Violations to fix:
 
-Flag and fix any violations of this flow.
+- `shared` importing from `features` or `app` → extract or inline
+- `features` importing from `app` → extract to shared
+- Feature A importing from Feature B → extract shared code to `src/components/` or `src/utils/`, update both
 
-### 3c. Enforce Unidirectional Architecture
-
-Code must flow in one direction only:
-
-```
-shared (components, hooks, lib, types, utils) → features → app
-```
-
-- `app/` may import from `features/` and shared modules.
-- `features/` may import from shared modules only — never from `app/` or other features.
-- Shared modules (`components/`, `hooks/`, `lib/`, `types/`, `utils/`) must never import from `features/` or `app/`.
-
-Flag and fix any violations of this flow.
-
-Features must be independent. If Feature A imports from Feature B:
-
-- Extract the shared code into a shared module (`components/`, `hooks/`, `utils/`, etc.)
-- Update both features to import from the shared module
-
-Recommend adding ESLint rules to enforce this permanently:
+After fixing, output these ESLint rules for the user to add manually:
 
 ```js
-'import/no-restricted-paths': [
-  'error',
-  {
-    zones: [
-      // No cross-feature imports
-      { target: './src/features/auth', from: './src/features', except: ['./auth'] },
-      // Add one zone per feature...
-
-      // Unidirectional enforcement
-      { target: './src/features', from: './src/app' },
-      {
-        target: ['./src/components', './src/hooks', './src/lib', './src/types', './src/utils'],
-        from: ['./src/features', './src/app'],
-      },
-    ],
-  },
-],
+'import/no-restricted-paths': ['error', {
+  zones: [
+    { target: './src/features', from: './src/app' },
+    {
+      target: ['./src/components', './src/hooks', './src/lib', './src/types', './src/utils'],
+      from: ['./src/features', './src/app'],
+    },
+    // Add one zone per feature to prevent cross-feature imports:
+    // { target: './src/features/auth', from: './src/features', except: ['./auth'] },
+  ],
+}],
 ```
 
----
-
-### 5. Remove Barrel Files from Features
-
-Barrel files (`index.ts` re-exporting everything) inside features cause Vite tree-shaking issues and can degrade performance.
-
-- Remove `index.ts` barrel files from feature folders and their subfolders (`components/`, `hooks/`, `utils/`, etc.).
-- Update all imports that previously used the barrel to import directly from the source file.
-- Each component file should be imported individually.
-
-> Exception: 
-> - Top-level `src/components/` barrel (`index.ts`) is acceptable if not causing performance issues, but direct imports are still preferred.
-> - UI component libraries (e.g., `src/components/ui/`) may use barrel files if they logically group related components (e.g., `button.tsx`, `input.tsx` grouped under `form`), but each individual component should still be its own file.
+Mark all Phase 3 todo items in the `todo` tool before moving to Phase 4.
 
 ---
 
-### 6. Enforce File & Folder Naming Conventions
+### Phase 4 — File Cleanup
 
-All files and folders under `src/` must use **kebab-case**:
+**Barrel file rule:**
 
-- ✅ `user-profile.tsx`, `use-auth.ts`, `api-client.ts`
-- ❌ `UserProfile.tsx`, `useAuth.ts`, `ApiClient.ts`
+- If `index.ts` only contains `export { X } from './x'` lines → delete it, update all imports
+- Exception: `src/components/ui/index.ts` may stay if it groups UI primitives logically
 
-Rename files and update all imports accordingly.
+**One-component-per-file rule:**
 
-Recommend adding ESLint rules:
+- If a file exports more than one React component → split it
+- New filename = kebab-case version of the component name
+- Props type goes immediately before the component in the same file:
+
+```tsx
+export type UserCardProps = {
+  userId: string;
+};
+
+export const UserCard = ({ userId }: UserCardProps) => {
+  // ...
+};
+```
+
+Mark all Phase 4 todo items in the `todo` tool before moving to Phase 5.
+
+---
+
+### Phase 5 — Naming
+
+All files and folders under `src/` must be kebab-case.
+
+| Before            | After              |
+| ----------------- | ------------------ |
+| `UserProfile.tsx` | `user-profile.tsx` |
+| `useAuth.ts`      | `use-auth.ts`      |
+| `ApiClient.ts`    | `api-client.ts`    |
+
+After renaming: update every import that referenced the old name.
+
+Recommend these ESLint rules for the user to add manually:
 
 ```js
 'check-file/filename-naming-convention': [
@@ -206,190 +182,209 @@ Recommend adding ESLint rules:
 ],
 ```
 
----
-
-### 6b. Enforce One Component Per File (Modular Component Pattern)
-
-Each component **must** be in its own file. This ensures tree-shaking effectiveness and clear module boundaries.
-
-**Correct Pattern:**
-
-```
-src/features/discussions/components/
-├── discussions-list.tsx         # exports DiscussionsList
-├── create-discussion.tsx        # exports CreateDiscussion
-├── delete-discussion.tsx        # exports DeleteDiscussion
-└── update-discussion.tsx        # exports UpdateDiscussion
-```
-
-**Incorrect Pattern (Do NOT do this):**
-
-```
-src/features/discussions/components/
-└── index.tsx                    # exports DiscussionsList, CreateDiscussion, etc. (too many in one file)
-```
-
-**When splitting components:**
-
-1. Create one file per component, named after the component (kebab-case version of the PascalCase name)
-2. Define the component's Props type right before the component:
-
-   ```tsx
-   export type DiscussionsListProps = {
-     onDiscussionPrefetch?: (id: string) => void;
-   };
-
-   export const DiscussionsList = ({
-     onDiscussionPrefetch,
-   }: DiscussionsListProps) => {
-     // component implementation
-   };
-   ```
-
-3. Update all imports to use direct imports:
-   - ❌ `import { DiscussionsList } from './index'`
-   - ✅ `import { DiscussionsList } from './discussions-list'`
-
-**Exception:** UI component libraries (like shadcn/ui components in `src/components/ui/`) are acceptable to keep modular even if they use index files, as long as each semantic unit (button, input, etc.) is logically separate.
+Mark all Phase 5 todo items in the `todo` tool before moving to Phase 6.
 
 ---
 
-### 7. Configure Absolute Imports
+### Phase 6 — Code Quality
 
-If `@/*` path alias is not yet configured, add it.
+**Props proximity:**
+Props type must be defined immediately before its component. Move it if it is elsewhere.
 
-In `tsconfig.json`:
+**JSDoc for utils:**
+Every exported function in `utils/` must have a JSDoc block:
+
+```ts
+/**
+ * Converts a KeyboardEvent into a chord string like "ctrl+shift+f".
+ * @param e - The keyboard event to convert.
+ * @returns A normalized chord string.
+ */
+export const toChord = (e: KeyboardEvent): string => { ... };
+```
+
+**Section comments inside components:**
+
+```tsx
+export const MyComponent = () => {
+  // state
+  const [open, setOpen] = useState(false);
+
+  // effects
+  useEffect(() => { ... }, []);
+
+  // handlers
+  const handleClick = () => { ... };
+
+  // render
+  return <div />;
+};
+```
+
+**React Compiler — remove manual memoization:**
+
+- Remove `useCallback` wrapping a function unless it has a documented performance reason
+- Remove `useMemo` unless it wraps a genuinely expensive computation with a comment explaining why
+- Remove `React.memo()` wrapping unless there is a documented reason
+
+Mark all Phase 6 todo items in the `todo` tool before moving to Phase 7.
+
+---
+
+### Phase 7 — Imports & TypeScript
+
+**Path alias — tsconfig.json:**
 
 ```json
 {
   "compilerOptions": {
     "baseUrl": ".",
-    "paths": {
-      "@/*": ["./src/*"]
-    }
+    "paths": { "@/*": ["./src/*"] }
   }
 }
 ```
 
-In `vite.config.ts`:
+**Path alias — vite.config.ts:**
 
 ```ts
 import path from 'path';
-
 export default {
-  resolve: {
-    alias: {
-      '@': path.resolve(__dirname, './src'),
-    },
-  },
+  resolve: { alias: { '@': path.resolve(__dirname, './src') } },
 };
 ```
 
-After configuring, replace all relative imports that traverse more than one level (e.g., `../../components/`) with absolute imports (e.g., `@/components/`).
+**Replace deep relative imports:**
+
+- `../../components/button` → `@/components/button`
+- Only replace imports that go more than one level deep (`../` is fine to leave)
+
+**TypeScript strict mode:**
+
+- Set `"strict": true` in `tsconfig.json`
+- Fix all resulting errors — do not suppress with `// @ts-ignore`
+- Replace all `any` with explicit types
+
+Mark all Phase 7 todo items in the `todo` tool before moving to Phase 8.
 
 ---
 
-### 8. Refactor State Management
+### Phase 8 — State Management Audit
 
-Audit every piece of state and categorize it:
+Do not refactor state automatically. Flag violations and explain the correct pattern.
 
-#### Component State
+| Violation                             | Correct pattern                                |
+| ------------------------------------- | ---------------------------------------------- |
+| Server data in Zustand/Redux          | Use TanStack Query hook in `features/<n>/api/` |
+| Global state used by 1-2 components   | Move to local `useState`                       |
+| Form state with raw useState          | Use React Hook Form                            |
+| Bookmarkable state in component state | Use URL params via react-router-dom            |
 
-- Use `useState` for simple, independent state.
-- Use `useReducer` for complex state where a single action updates multiple values.
-- Keep state local unless it needs to be shared.
-
-#### Application State (Global)
-
-- Use React Context + hooks for lightweight global state.
-- Prefer **Zustand** or **Jotai** for more complex global state.
-- Avoid globalizing state that only one or two components need.
-
-#### Server Cache State
-
-- Do **not** store server data in Redux or Zustand manually.
-- Use **TanStack Query (react-query)** or **SWR** for data fetching and caching.
-- Each feature's `api/` folder should export query hooks (e.g., `useGetDiscussions`).
-
-#### Form State
-
-- Use **React Hook Form** for form state management.
-- Pair with **Zod** or **Yup** for schema validation.
-- Create abstracted `<Form>` and input field components that wrap the library.
-
-#### URL State
-
-- Use URL params and query strings (via `react-router-dom`) for state that should be bookmarkable or shareable.
-- Do not duplicate URL state in component or global state.
+Mark all Phase 8 todo items in the `todo` tool before moving to Phase 9.
 
 ---
 
-### 9. Enforce TypeScript Strictness
+### Phase 9 — Empty States & Errors
 
-- Enable `strict: true` in `tsconfig.json` if not already enabled.
-- All components, hooks, and utilities must have explicit TypeScript types — no `any`.
-- When refactoring, update type declarations first, then fix resulting TypeScript errors.
-- Shared types belong in `src/types/`. Feature-specific types belong in `src/features/<feature>/types/`.
+If missing, create these files:
+
+**`src/components/empty-states/empty-list.tsx`**
+
+```tsx
+export type EmptyListProps = {
+  title?: string;
+  description?: string;
+  action?: React.ReactNode;
+};
+
+export const EmptyList = ({
+  title = 'Nothing here yet',
+  description,
+  action,
+}: EmptyListProps) => (
+  <div className="empty-list">
+    <p>{title}</p>
+    {description && <p>{description}</p>}
+    {action}
+  </div>
+);
+```
+
+**`src/components/errors/error-fallback.tsx`**
+
+```tsx
+export type ErrorFallbackProps = {
+  error?: Error;
+  onReset?: () => void;
+};
+
+export const ErrorFallback = ({ error, onReset }: ErrorFallbackProps) => (
+  <div role="alert">
+    <p>Something went wrong.</p>
+    {error && <pre>{error.message}</pre>}
+    {onReset && <button onClick={onReset}>Try again</button>}
+  </div>
+);
+```
+
+Mark all Phase 9 todo items in the `todo` tool before moving to Phase 10.
 
 ---
 
-### 10. Code Quality Tooling (Verify & Recommend)
+### Phase 10 — Tooling Report
 
-Check whether the following tools are configured. If not, recommend their setup:
+Do not install anything. Output a status table and next steps:
 
-| Tool       | Purpose                              |
-| ---------- | ------------------------------------ |
-| ESLint     | Linting and code quality             |
-| Prettier   | Consistent formatting                |
-| Husky      | Pre-commit hooks (lint + type-check) |
-| TypeScript | Static type checking                 |
+```
+Tool       Status         Action Required
+─────────────────────────────────────────────────────
+ESLint     [found/missing] [none / run: npm install eslint --save-dev]
+Prettier   [found/missing] [none / run: npm install prettier --save-dev]
+Husky      [found/missing] [none / run: npm install husky --save-dev && npx husky init]
+TypeScript [found/missing] [none / already configured]
+```
 
-Ensure ESLint and Prettier are integrated (Prettier rules run through ESLint, not separately).
-
----
-
-## Idempotency Checklist
-
-Before making any change, verify:
-
-- [ ] Is the folder structure already correct for this file/feature?
-- [ ] Is this import already absolute (`@/`)?
-- [ ] Is this file already named in kebab-case?
-- [ ] Is each component already in its own file (one-component-per-file rule)?
-- [ ] Are Props types already defined near the component?
-- [ ] Is this state already categorized and managed correctly?
-- [ ] Is this cross-feature import already eliminated?
-- [ ] Is this barrel file already removed?
-
-If yes → **skip the change entirely**.
+Mark all Phase 10 todo items in the `todo` tool. All items should now be done, skipped, or blocked.
 
 ---
 
 ## Output Format
 
-For each file or folder changed, report:
+For every file touched:
 
 ```
-[CHANGED] src/features/UserProfile/index.tsx → src/features/user-profile/components/user-profile.tsx
-[REASON]  Renamed to kebab-case and moved into feature components folder.
+[CHANGED] src/features/UserProfile/index.tsx
+          → src/features/user-profile/components/user-profile.tsx
+[REASON]  Renamed to kebab-case, moved into feature components folder, split into own file.
 
-[CHANGED] src/features/discussions/components/discussions.tsx → Split into:
-          - src/features/discussions/components/discussions-list.tsx (DiscussionsList component)
-          - src/features/discussions/components/create-discussion.tsx (CreateDiscussion component)
-[REASON]  Enforced one-component-per-file pattern for better tree-shaking and modularity.
+[SKIPPED] src/features/auth/api/get-user.ts
+[REASON]  Already compliant — kebab-case, single export, correct location.
 
-[CHANGED] src/components/UserCard.tsx → Import updated to use @/features/user-profile/components/user-profile
-[REASON]  Replaced relative import with absolute import alias.
-
-[CHANGED] src/features/auth/components/index.ts → DELETED
-[REASON]  Removed barrel file; all imports now reference component files directly.
-
-[SKIPPED] src/features/auth/api/get-user.ts — Already compliant, no changes needed.
+[BLOCKED] src/features/dashboard/components/widget.tsx
+[REASON]  Exports from both 'analytics' and 'reporting' features. Cannot determine ownership. Please clarify.
 ```
 
-At the end, provide a summary:
+---
 
-- Total files changed
-- Total files skipped (already compliant)
-- Total files split into multiple files (for one-component-per-file refactoring)
-- Remaining manual actions required (e.g., installing packages, adding ESLint plugins)
+## Final Summary
+
+After all phases are complete, output:
+
+```
+== Refactor Complete ==
+
+Files changed:   X
+Files skipped:   X  (already compliant)
+Files split:     X  (one-component-per-file)
+Files blocked:   X  (need manual decision)
+
+Manual actions required:
+  1. Install ESLint plugins: ...
+  2. Add ESLint rules: (see Phase 3 and Phase 5 output)
+  3. Review blocked files: (listed above)
+  4. Run: tsc --noEmit to verify TypeScript after changes
+
+Updated Todo List:
+  [x] 1.1  Map all files under src/
+  [x] 1.2  ...
+  (full list with final status of every item)
+```

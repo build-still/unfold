@@ -27,7 +27,6 @@ const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7;
 const SIDEBAR_WIDTH = '10rem';
 const SIDEBAR_WIDTH_MOBILE = '10rem';
 const SIDEBAR_WIDTH_ICON = '3rem';
-const SIDEBAR_KEYBOARD_SHORTCUT = 'b';
 
 type SidebarContextProps = {
   state: 'expanded' | 'collapsed';
@@ -70,58 +69,42 @@ function SidebarProvider({
   // We use openProp and setOpenProp for control from outside the component.
   const [_open, _setOpen] = React.useState(defaultOpen);
   const open = openProp ?? _open;
-  const setOpen = React.useCallback(
-    (value: boolean | ((value: boolean) => boolean)) => {
-      const openState = typeof value === 'function' ? value(open) : value;
-      if (setOpenProp) {
-        setOpenProp(openState);
-      } else {
-        _setOpen(openState);
-      }
+  const openRef = React.useRef(open);
 
-      // This sets the cookie to keep the sidebar state.
-      document.cookie = `${SIDEBAR_COOKIE_NAME}=${openState}; path=/; max-age=${SIDEBAR_COOKIE_MAX_AGE}`;
-    },
-    [setOpenProp, open],
-  );
-
-  // Helper to toggle the sidebar.
-  const toggleSidebar = React.useCallback(() => {
-    return isMobile ? setOpenMobile((open) => !open) : setOpen((open) => !open);
-  }, [isMobile, setOpen, setOpenMobile]);
-
-  // Adds a keyboard shortcut to toggle the sidebar.
   React.useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (
-        event.key === SIDEBAR_KEYBOARD_SHORTCUT &&
-        (event.metaKey || event.ctrlKey)
-      ) {
-        event.preventDefault();
-        toggleSidebar();
-      }
-    };
+    openRef.current = open;
+  }, [open]);
 
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [toggleSidebar]);
+  const setOpen = (value: boolean | ((value: boolean) => boolean)) => {
+    const currentOpen = openRef.current;
+    const openState = typeof value === 'function' ? value(currentOpen) : value;
+    if (setOpenProp) {
+      setOpenProp(openState);
+    } else {
+      _setOpen(openState);
+    }
+
+    // This sets the cookie to keep the sidebar state.
+    document.cookie = `${SIDEBAR_COOKIE_NAME}=${openState}; path=/; max-age=${SIDEBAR_COOKIE_MAX_AGE}`;
+  };
+
+  const toggleSidebar = () => {
+    return isMobile ? setOpenMobile((open) => !open) : setOpen((open) => !open);
+  };
 
   // We add a state so that we can do data-state="expanded" or "collapsed".
   // This makes it easier to style the sidebar with Tailwind classes.
   const state = open ? 'expanded' : 'collapsed';
 
-  const contextValue = React.useMemo<SidebarContextProps>(
-    () => ({
-      state,
-      open,
-      setOpen,
-      isMobile,
-      openMobile,
-      setOpenMobile,
-      toggleSidebar,
-    }),
-    [state, open, setOpen, isMobile, openMobile, setOpenMobile, toggleSidebar],
-  );
+  const contextValue: SidebarContextProps = {
+    state,
+    open,
+    setOpen,
+    isMobile,
+    openMobile,
+    setOpenMobile,
+    toggleSidebar,
+  };
 
   return (
     <SidebarContext.Provider value={contextValue}>
@@ -131,6 +114,7 @@ function SidebarProvider({
           {
             '--sidebar-width': SIDEBAR_WIDTH,
             '--sidebar-width-icon': SIDEBAR_WIDTH_ICON,
+            '--sidebar-offcanvas-offset': '0px',
             ...style,
           } as React.CSSProperties
         }
@@ -227,10 +211,10 @@ function Sidebar({
         data-slot="sidebar-container"
         data-side={side}
         className={cn(
-          'fixed inset-y-0 z-10 hidden h-svh w-(--sidebar-width) transition-[left,right,width] duration-200 ease-linear data-[side=left]:left-0 data-[side=left]:group-data-[collapsible=offcanvas]:left-[calc(var(--sidebar-width)*-1)] data-[side=right]:right-0 data-[side=right]:group-data-[collapsible=offcanvas]:right-[calc(var(--sidebar-width)*-1)] md:flex',
+          'fixed inset-y-0 z-10 hidden h-svh w-(--sidebar-width) transition-[left,right,width] duration-200 ease-linear data-[side=left]:left-0 data-[side=left]:group-data-[collapsible=offcanvas]:left-[calc((var(--sidebar-width)+var(--sidebar-offcanvas-offset))*-1)] data-[side=right]:right-0 data-[side=right]:group-data-[collapsible=offcanvas]:right-[calc((var(--sidebar-width)+var(--sidebar-offcanvas-offset))*-1)] md:flex',
           // Adjust the padding for floating and inset variants.
           variant === 'floating' || variant === 'inset'
-            ? 'm-2 ml-5 group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)+(--spacing(4))+2px)]'
+            ? 'm-2 [--sidebar-offcanvas-offset:1.25rem] group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)+(--spacing(4))+2px)] data-[side=left]:ml-5 data-[side=right]:mr-5'
             : 'group-data-[collapsible=icon]:w-(--sidebar-width-icon) group-data-[side=left]:border-r group-data-[side=right]:border-l',
           className,
         )}

@@ -2,8 +2,8 @@ import { useDroppable } from '@dnd-kit/react';
 
 import { NotesGroup } from './notes-group';
 
-import { FlatNode } from '@/api/nodes';
 import { SidebarGroupContent, SidebarMenu } from '@/components/ui/sidebar';
+import { FlatNode } from '@/features/sidebar/api/nodes';
 import { DROPPABLE_NOTES_SECTION_ID } from '@/features/sidebar/utils/dnd';
 import { groupNodesByParent } from '@/features/sidebar/utils/node-tree';
 import { cn } from '@/utils/tailwind';
@@ -34,7 +34,7 @@ export const NotesSection = ({
         ref={ref}
         className={cn(
           isDropTarget || isDraggingInNotesArea
-            ? 'border-muted-foreground-heavy/40 bg-sidebar-accent/20 border border-dashed'
+            ? 'border-muted-foreground-heavy/30 bg-sidebar-accent/20 border border-dashed'
             : 'border border-transparent',
           'box-border h-full min-h-0 rounded-2xl p-1 outline-none',
         )}

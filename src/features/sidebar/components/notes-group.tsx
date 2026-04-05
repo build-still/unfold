@@ -6,7 +6,6 @@ import { useSidebarStore } from '../stores/sidebar-store';
 
 import { NoSubNotes } from './no-sub-notes';
 
-import { FlatNode } from '@/api/nodes';
 import {
   ContextMenu,
   ContextMenuContent,
@@ -25,6 +24,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { SidebarContextMenuShortcuts } from '@/config/sidebar';
+import { FlatNode } from '@/features/sidebar/api/nodes';
 import { cn } from '@/utils/tailwind';
 
 export interface NotesGroupProps {
@@ -67,7 +67,7 @@ export const NotesGroup = ({
       }}
       className={cn(
         'group/note-row flex w-full items-center gap-1 rounded-lg outline-none',
-        isDropTarget && 'border-muted-foreground-heavy/40 border border-dashed',
+        isDropTarget && 'border-muted-foreground-heavy/30 border border-dashed',
       )}
       onClick={() => {
         setActiveNodeId(node.id);
@@ -76,7 +76,7 @@ export const NotesGroup = ({
     >
       <span className="min-w-0 flex-1 truncate text-xs">{node.name}</span>
 
-      <span className="pointer-events-none ml-auto flex items-center gap-0.5 opacity-0 transition-opacity group-hover/note-row:pointer-events-auto group-hover/note-row:opacity-100">
+      <span className="pointer-events-none ml-auto flex max-w-0 items-center gap-0.5 overflow-hidden opacity-0 transition-[max-width,opacity] duration-150 group-focus-within/note-row:pointer-events-auto group-focus-within/note-row:max-w-12 group-focus-within/note-row:opacity-100 group-hover/note-row:pointer-events-auto group-hover/note-row:max-w-12 group-hover/note-row:opacity-100">
         <Tooltip disableHoverableContent>
           <TooltipTrigger asChild>
             <button

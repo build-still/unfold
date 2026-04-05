@@ -8,13 +8,13 @@ import {
   useSetPinnedMutation,
 } from '../api/use-nodes';
 
+import { getUndoManager } from '@/core/undo/undo-manager';
 import {
   nodeQueryKeys,
   nodesList,
   type FlatNode,
   type SpaceNotesDto,
-} from '@/api/nodes';
-import { getUndoManager } from '@/core/undo/undo-manager';
+} from '@/features/sidebar/api/nodes';
 
 const cloneNodes = (nodes: FlatNode[]): FlatNode[] =>
   nodes.map((node) => ({ ...node }));

@@ -9,6 +9,7 @@ import { AppLevelLayout } from '@/config/app-level';
 import { COMMAND_IDS, useRegisterCommand } from '@/config/commands';
 import { DEFAULT_SPACE_ID } from '@/config/spaces';
 import { useConfig } from '@/config/use-config';
+import { getUndoManager } from '@/core/undo/undo-manager';
 import { SpaceSidebar } from '@/features/sidebar/components/space-sidebar';
 import { useSidebarUndoActions } from '@/features/sidebar/hooks/use-sidebar-undo-actions';
 import { useSidebarStore } from '@/features/sidebar/stores/sidebar-store';
@@ -24,6 +25,7 @@ function ActiveFileIdPanel() {
 }
 
 export function SpaceLayout({ children }: { children: React.ReactNode }) {
+  // state
   const fullScreen = useFullscreen();
   const { config } = useConfig();
   const [isSidebarOpen, setIsSidebarOpen] = React.useState(true);
@@ -33,6 +35,7 @@ export function SpaceLayout({ children }: { children: React.ReactNode }) {
   const trafficLightWidth = `${AppLevelLayout.trafficLights.widthRem}rem`;
   const sidebarPosition = config.sidebar.position;
 
+  // handlers
   const handleToggleSidebarCommand = () => {
     setIsSidebarOpen((isOpen) => !isOpen);
   };
@@ -45,9 +48,20 @@ export function SpaceLayout({ children }: { children: React.ReactNode }) {
     });
   };
 
+  const handleUndoCommand = () => {
+    void getUndoManager().undo();
+  };
+
+  const handleRedoCommand = () => {
+    void getUndoManager().redo();
+  };
+
   useRegisterCommand(COMMAND_IDS.sidebarToggle, handleToggleSidebarCommand);
   useRegisterCommand(COMMAND_IDS.fileNew, handleCreateRootFileCommand);
+  useRegisterCommand(COMMAND_IDS.undo, handleUndoCommand);
+  useRegisterCommand(COMMAND_IDS.redo, handleRedoCommand);
 
+  // render
   const mainInset = (
     <SidebarInset className="min-h-0 flex-1 overflow-y-auto">
       <div className="flex min-h-0 flex-1 flex-col p-4">

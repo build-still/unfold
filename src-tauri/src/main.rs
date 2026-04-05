@@ -3,9 +3,10 @@ use tauri::Manager;
 mod commands;
 mod config;
 mod db;
+mod helpers;
+mod keybindings;
 mod models;
 mod utils;
-mod helpers;
 
 fn main() {
     tauri::Builder::default()
@@ -76,6 +77,12 @@ fn main() {
             commands::nodes_delete,
             commands::nodes_set_pinned,
             commands::nodes_apply_space_snapshot,
+            config::get_config,
+            config::set_config,
+            config::reset_config,
+            keybindings::get_keybindings,
+            keybindings::set_keybindings,
+            keybindings::reset_keybindings,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
