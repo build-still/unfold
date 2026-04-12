@@ -79,7 +79,7 @@
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.1.6",
     "@types/tippy.js": "^6.3.0",
-    "@vitejs/plugin-react": "^5.1.4",
+    "@vitejs/plugin-react": "^5.2.0",
     "sass-embedded": "^1.93.3",
     "serve": "^14.2.6",
     "typescript": "~5.9.3",
